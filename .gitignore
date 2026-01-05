@@ -1,0 +1,24 @@
+# Ignorar arquivos temporários e de build
+*.tmp
+*.log
+*.bak
+~$*
+
+# Ignorar arquivos do sistema
+.DS_Store
+Thumbs.db
+
+# Ignorar diretórios de dependências
+node_modules/
+.clasp.json
+
+# Ignorar arquivos de IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Ignorar arquivos de configuração local
+.env
+config.local.json

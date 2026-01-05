@@ -1,0 +1,334 @@
+<script>
+// Estado da aplicação
+let currentUser = null;
+let atividades = [];
+let equipes = [];
+let categorias = [];
+let produtos = [];
+
+// Inicialização
+window.onload = function() {
+  loadUserInfo();
+  loadData();
+};
+
+// ==================== User Management ====================
+
+function loadUserInfo() {
+  google.script.run
+    .withSuccessHandler(function(user) {
+      currentUser = user;
+      document.getElementById('userEmail').textContent = user.email;
+    })
+    .withFailureHandler(function(error) {
+      console.error('Erro ao carregar usuário:', error);
+      showNotification('Erro ao carregar informações do usuário', 'error');
+    })
+    .getCurrentUser();
+}
+
+function logout() {
+  if (confirm('Deseja realmente sair?')) {
+    google.script.run
+      .withSuccessHandler(function() {
+        window.location.reload();
+      })
+      .logout();
+  }
+}
+
+// ==================== Data Loading ====================
+
+function loadData() {
+  loadAtividades();
+  loadEquipes();
+  loadCategorias();
+  loadProdutos();
+}
+
+function loadAtividades() {
+  google.script.run
+    .withSuccessHandler(function(data) {
+      atividades = data;
+      renderAtividades();
+      updateStats();
+    })
+    .withFailureHandler(function(error) {
+      console.error('Erro ao carregar atividades:', error);
+      showNotification('Erro ao carregar atividades', 'error');
+    })
+    .getAtividades();
+}
+
+function loadEquipes() {
+  google.script.run
+    .withSuccessHandler(function(data) {
+      equipes = data;
+      populateEquipesFilter();
+    })
+    .withFailureHandler(function(error) {
+      console.error('Erro ao carregar equipes:', error);
+    })
+    .getEquipes();
+}
+
+function loadCategorias() {
+  google.script.run
+    .withSuccessHandler(function(data) {
+      categorias = data;
+      populateCategoriasFilter();
+    })
+    .withFailureHandler(function(error) {
+      console.error('Erro ao carregar categorias:', error);
+    })
+    .getCategorias();
+}
+
+function loadProdutos() {
+  google.script.run
+    .withSuccessHandler(function(data) {
+      produtos = data;
+      populateProdutosFilter();
+    })
+    .withFailureHandler(function(error) {
+      console.error('Erro ao carregar produtos:', error);
+    })
+    .getProdutos();
+}
+
+// ==================== UI Updates ====================
+
+function populateEquipesFilter() {
+  const select = document.getElementById('filter-equipe');
+  select.innerHTML = '<option value="">Todas</option>';
+  equipes.forEach(equipe => {
+    select.innerHTML += `<option value="${equipe.id}">${equipe.nome}</option>`;
+  });
+}
+
+function populateCategoriasFilter() {
+  const select = document.getElementById('filter-categoria');
+  select.innerHTML = '<option value="">Todas</option>';
+  categorias.forEach(categoria => {
+    select.innerHTML += `<option value="${categoria.id}">${categoria.nome}</option>`;
+  });
+}
+
+function populateProdutosFilter() {
+  const select = document.getElementById('filter-produto');
+  select.innerHTML = '<option value="">Todos</option>';
+  produtos.forEach(produto => {
+    select.innerHTML += `<option value="${produto.id}">${produto.nome}</option>`;
+  });
+}
+
+function renderAtividades() {
+  const tbody = document.getElementById('tbody-atividades');
+  
+  if (atividades.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center">Nenhuma atividade cadastrada</td></tr>';
+    return;
+  }
+  
+  tbody.innerHTML = '';
+  atividades.forEach(atividade => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${atividade.id}</td>
+      <td>${formatDate(atividade.data)}</td>
+      <td>${atividade.descricao || '-'}</td>
+      <td>${atividade.cai ? 'Sim' : 'Não'}</td>
+      <td>
+        <button class="btn-secondary" onclick="editAtividade(${atividade.id})">Editar</button>
+        <button class="btn-secondary" onclick="deleteAtividadeConfirm(${atividade.id})">Excluir</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function updateStats() {
+  document.getElementById('total-atividades').textContent = atividades.length;
+  
+  // Estes cálculos precisam ser implementados com base nas equipes
+  document.getElementById('acoes-internas').textContent = '0';
+  document.getElementById('acoes-conjuntas').textContent = '0';
+  
+  const totalCai = atividades.filter(a => a.cai).length;
+  document.getElementById('total-cai').textContent = totalCai;
+}
+
+// ==================== Navigation ====================
+
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const mainContent = document.getElementById('mainContent');
+  sidebar.classList.toggle('collapsed');
+  mainContent.classList.toggle('expanded');
+}
+
+function showPage(pageId) {
+  // Remover classe active de todas as páginas
+  document.querySelectorAll('.page').forEach(page => {
+    page.classList.remove('active');
+  });
+  
+  // Remover classe active de todos os itens do menu
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.classList.remove('active');
+  });
+  
+  // Adicionar classe active à página selecionada
+  const page = document.getElementById('page-' + pageId);
+  if (page) {
+    page.classList.add('active');
+  }
+  
+  // Adicionar classe active ao item do menu clicado
+  event.target.closest('.nav-item').classList.add('active');
+}
+
+// ==================== Forms ====================
+
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.getElementById('form-nova-atividade');
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      salvarAtividade();
+    });
+  }
+});
+
+function salvarAtividade() {
+  const data = document.getElementById('atividade-data').value;
+  const descricao = document.getElementById('atividade-descricao').value;
+  const cai = document.getElementById('atividade-cai').checked;
+  
+  if (!data) {
+    showNotification('Data é obrigatória', 'error');
+    return;
+  }
+  
+  const atividade = {
+    data: data,
+    descricao: descricao,
+    cai: cai
+  };
+  
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) {
+        showNotification('Atividade salva com sucesso!', 'success');
+        limparFormulario();
+        loadAtividades();
+        showPage('atividades-cadastradas');
+      } else {
+        showNotification('Erro ao salvar: ' + result.message, 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      console.error('Erro:', error);
+      showNotification('Erro ao salvar atividade', 'error');
+    })
+    .addAtividade(atividade);
+}
+
+function limparFormulario() {
+  document.getElementById('form-nova-atividade').reset();
+}
+
+function editAtividade(id) {
+  // Implementar edição
+  showNotification('Funcionalidade de edição em desenvolvimento', 'info');
+}
+
+function deleteAtividadeConfirm(id) {
+  if (confirm('Deseja realmente excluir esta atividade?')) {
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.success) {
+          showNotification('Atividade excluída com sucesso!', 'success');
+          loadAtividades();
+        } else {
+          showNotification('Erro ao excluir: ' + result.message, 'error');
+        }
+      })
+      .withFailureHandler(function(error) {
+        console.error('Erro:', error);
+        showNotification('Erro ao excluir atividade', 'error');
+      })
+      .deleteAtividade(id);
+  }
+}
+
+// ==================== Filters ====================
+
+function aplicarFiltros() {
+  const dataInicio = document.getElementById('filter-data-inicio').value;
+  const dataFim = document.getElementById('filter-data-fim').value;
+  const equipeId = document.getElementById('filter-equipe').value;
+  const categoriaId = document.getElementById('filter-categoria').value;
+  const produtoId = document.getElementById('filter-produto').value;
+  const cai = document.getElementById('filter-cai').value;
+  
+  const filters = {
+    dataInicio: dataInicio,
+    dataFim: dataFim,
+    equipeId: equipeId,
+    categoriaId: categoriaId,
+    produtoId: produtoId,
+    cai: cai
+  };
+  
+  google.script.run
+    .withSuccessHandler(function(data) {
+      atividades = data;
+      renderAtividades();
+      updateStats();
+      showNotification('Filtros aplicados', 'success');
+    })
+    .withFailureHandler(function(error) {
+      console.error('Erro ao aplicar filtros:', error);
+      showNotification('Erro ao aplicar filtros', 'error');
+    })
+    .getAtividades(filters);
+}
+
+// ==================== Utilities ====================
+
+function formatDate(date) {
+  if (!date) return '-';
+  
+  if (typeof date === 'string') {
+    return date;
+  }
+  
+  const d = new Date(date);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
+function showNotification(message, type) {
+  // Implementação simples com alert
+  // Em produção, usar um sistema de notificação mais elaborado
+  if (type === 'error') {
+    alert('Erro: ' + message);
+  } else if (type === 'success') {
+    alert('Sucesso: ' + message);
+  } else {
+    alert(message);
+  }
+}
+
+// ==================== Google Apps Script Client API ====================
+
+// As chamadas para o servidor são feitas via google.script.run
+// Exemplo:
+// google.script.run
+//   .withSuccessHandler(callback)
+//   .withFailureHandler(errorCallback)
+//   .serverFunction(params);
+</script>

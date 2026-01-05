@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Atividades BDI Serra</title>
+  
+  <?!= include('Styles'); ?>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+      <h1 class="app-title">📊 Atividades BDI Serra</h1>
+    </div>
+    <div class="header-right">
+      <span class="user-email" id="userEmail">Carregando...</span>
+      <button class="btn-logout" onclick="logout()">Sair</button>
+    </div>
+  </header>
+  
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <nav class="nav-menu">
+      <a href="#" class="nav-item active" onclick="showPage('dashboard')">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-text">Início</span>
+      </a>
+      
+      <a href="#" class="nav-item" onclick="showPage('nova-atividade')">
+        <span class="nav-icon">➕</span>
+        <span class="nav-text">Inserir Nova Atividade</span>
+      </a>
+      
+      <a href="#" class="nav-item" onclick="showPage('atividades-cadastradas')">
+        <span class="nav-icon">📋</span>
+        <span class="nav-text">Atividades Cadastradas</span>
+      </a>
+      
+      <div class="nav-section">
+        <div class="nav-section-title">Configuração</div>
+        
+        <a href="#" class="nav-item nav-subitem" onclick="showPage('config-equipes')">
+          <span class="nav-icon">👥</span>
+          <span class="nav-text">Cadastrar Equipe</span>
+        </a>
+        
+        <a href="#" class="nav-item nav-subitem" onclick="showPage('config-categorias')">
+          <span class="nav-icon">📁</span>
+          <span class="nav-text">Cadastrar Categoria</span>
+        </a>
+        
+        <a href="#" class="nav-item nav-subitem" onclick="showPage('config-produtos')">
+          <span class="nav-icon">📦</span>
+          <span class="nav-text">Cadastrar Produto</span>
+        </a>
+      </div>
+    </nav>
+  </aside>
+  
+  <!-- Main Content -->
+  <main class="main-content" id="mainContent">
+    <!-- Dashboard Page -->
+    <div id="page-dashboard" class="page active">
+      <h2>Dashboard</h2>
+      
+      <!-- Filtros -->
+      <div class="filters-container">
+        <h3>Filtros</h3>
+        <div class="filters-grid">
+          <div class="filter-item">
+            <label>Data Início:</label>
+            <input type="date" id="filter-data-inicio">
+          </div>
+          <div class="filter-item">
+            <label>Data Fim:</label>
+            <input type="date" id="filter-data-fim">
+          </div>
+          <div class="filter-item">
+            <label>Equipe:</label>
+            <select id="filter-equipe" multiple>
+              <option value="">Todas</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label>Categoria:</label>
+            <select id="filter-categoria" multiple>
+              <option value="">Todas</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label>Produto:</label>
+            <select id="filter-produto" multiple>
+              <option value="">Todos</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label>CAI:</label>
+            <select id="filter-cai">
+              <option value="">Todos</option>
+              <option value="sim">Sim</option>
+              <option value="nao">Não</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn-primary" onclick="aplicarFiltros()">Pesquisar</button>
+      </div>
+      
+      <!-- Cards de Estatísticas -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="total-atividades">0</div>
+          <div class="stat-label">Total de Atividades</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="acoes-internas">0</div>
+          <div class="stat-label">Ações Internas</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="acoes-conjuntas">0</div>
+          <div class="stat-label">Ações Conjuntas</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="total-cai">0</div>
+          <div class="stat-label">CAI PLANOP</div>
+        </div>
+      </div>
+      
+      <!-- Área para Gráficos -->
+      <div class="charts-container">
+        <div class="chart-box">
+          <h3>Atividades por Categoria</h3>
+          <div id="chart-categorias">Gráfico será implementado</div>
+        </div>
+        <div class="chart-box">
+          <h3>Atividades por Mês</h3>
+          <div id="chart-timeline">Gráfico será implementado</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Nova Atividade Page -->
+    <div id="page-nova-atividade" class="page">
+      <h2>Inserir Nova Atividade</h2>
+      <form id="form-nova-atividade" class="form-container">
+        <div class="form-group">
+          <label for="atividade-data">Data *</label>
+          <input type="date" id="atividade-data" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="atividade-descricao">Descrição</label>
+          <textarea id="atividade-descricao" rows="4"></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="atividade-cai">
+            CAI PLANOP
+          </label>
+        </div>
+        
+        <div class="form-actions">
+          <button type="submit" class="btn-primary">Salvar Atividade</button>
+          <button type="button" class="btn-secondary" onclick="limparFormulario()">Limpar</button>
+        </div>
+      </form>
+    </div>
+    
+    <!-- Atividades Cadastradas Page -->
+    <div id="page-atividades-cadastradas" class="page">
+      <h2>Atividades Cadastradas</h2>
+      
+      <div class="table-container">
+        <table id="table-atividades" class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Data</th>
+              <th>Descrição</th>
+              <th>CAI</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-atividades">
+            <tr>
+              <td colspan="5" class="text-center">Carregando...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    
+    <!-- Config Pages (simplified for now) -->
+    <div id="page-config-equipes" class="page">
+      <h2>Cadastrar Equipe</h2>
+      <p>Formulário de cadastro de equipes será implementado aqui.</p>
+    </div>
+    
+    <div id="page-config-categorias" class="page">
+      <h2>Cadastrar Categoria</h2>
+      <p>Formulário de cadastro de categorias será implementado aqui.</p>
+    </div>
+    
+    <div id="page-config-produtos" class="page">
+      <h2>Cadastrar Produto</h2>
+      <p>Formulário de cadastro de produtos será implementado aqui.</p>
+    </div>
+  </main>
+  
+  <?!= include('Scripts'); ?>
+</body>
+</html>
