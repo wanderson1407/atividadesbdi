@@ -1,0 +1,547 @@
+﻿<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Atividades BDI Serra</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <link rel="stylesheet" href="/static/arquetipo/frontend-style.css">
+    <style>
+        /* Layout principal */
+        *{box-sizing:border-box}
+        body{margin:0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:var(--pbi-background)}
+        .app-shell{display:flex;min-height:100vh;padding-top:50px}
+        
+        /* Sidebar */
+        .sidebar{width:250px;background:#f2f2f2;color:#333;display:flex;flex-direction:column;padding:0;position:fixed;top:50px;left:0;height:calc(100vh - 50px);z-index:90;border-right:1px solid #dee2e6;transition:width .3s ease}
+        .sidebar.collapsed{width:70px}
+        .sidebar .logo{padding:20px 16px;font-size:0.95rem;font-weight:600;border-bottom:1px solid #dee2e6;background:#f2f2f2;display:flex;align-items:center;gap:10px;overflow:hidden;white-space:nowrap}
+        .sidebar .logo img{display:none}
+        .sidebar nav{flex:1;padding:12px 0;overflow-y:auto;overflow-x:hidden}
+        .sidebar nav ul{list-style:none;margin:0;padding:0}
+        .sidebar nav li{border-bottom:1px solid #e9ecef}
+        .sidebar nav li a{display:flex;align-items:center;gap:12px;padding:14px 20px;color:#333;text-decoration:none;transition:background .2s;font-size:0.9rem;white-space:nowrap;overflow:hidden}
+        .sidebar nav li a .icon{color:#1b1464;font-size:1.2rem;min-width:24px;text-align:center}
+        .sidebar nav li a .text{flex:1}
+        .sidebar.collapsed nav li a .text{display:none}
+        .sidebar nav li a:hover{background:#e0e0e0}
+        .sidebar nav li a.active{background:#e0e0e0;border-left:4px solid #1b1464;font-weight:600}
+        
+        /* Topbar */
+        .main-header{position:fixed;top:0;left:0;right:0;height:50px;background:#1b1464;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 20px;z-index:100;box-shadow:0 2px 4px rgba(0,0,0,0.1)}
+        .header-left{display:flex;align-items:center;gap:15px}
+        .sidebar-toggle{background:none;border:none;color:#fff;font-size:1.5rem;cursor:pointer;padding:8px;display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:4px;transition:background .2s}
+        .sidebar-toggle:hover{background:rgba(255,255,255,0.1)}
+        .system-name{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;font-size:1rem;font-weight:400;color:#fff;margin:0}
+        .header-right{display:flex;align-items:center;position:relative}
+        .user-dropdown{position:relative}
+        .user-name{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;font-size:14px;color:#fff;text-transform:uppercase;font-weight:400;cursor:pointer;padding:8px 12px;border-radius:4px;transition:background .2s}
+        .user-name:hover{background:rgba(255,255,255,0.1)}
+        .user-menu{position:absolute;top:100%;right:0;background:#fff;border:1px solid #dee2e6;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,0.15);min-width:150px;margin-top:5px;display:none;z-index:1000}
+        .user-menu.show{display:block}
+        .user-menu-item{display:block;padding:10px 16px;color:#333;text-decoration:none;font-size:14px;cursor:pointer;transition:background .2s;border:none;background:none;width:100%;text-align:left}
+        .user-menu-item:hover{background:#f8f9fa}
+        .user-menu-item.logout-item{color:#dc3545;border-top:1px solid #e9ecef}
+        .topbar{background:transparent;color:inherit;height:auto;display:block;padding:0;margin-bottom:20px;box-shadow:none}
+        .topbar h1{display:none}
+        
+        /* Main content */
+        .main-content{flex:1;margin-left:250px;padding:12px;transition:margin-left .3s ease}
+        .main-content.expanded{margin-left:70px}
+        
+        /* Filtros */
+        .filters-row{margin-bottom:8px}
+        .filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;align-items:end}
+        .filters label{display:flex;flex-direction:column;font-size:0.85rem;color:#555}
+        .filters input[type="date"],.filters input[type="search"]{padding:6px 8px;border:1px solid var(--taura-border);border-radius:4px;margin-top:4px}
+        .filters select{padding:6px;border:1px solid var(--taura-border);border-radius:4px;margin-top:4px;min-height:80px}
+        .filters button{padding:8px 12px;border:none;border-radius:4px;cursor:pointer;font-size:0.8rem}
+        .filters button#btnApply{background:var(--pbi-accent-blue);color:#fff}
+        .filters button#btnExport{background:#28a745;color:#fff}
+        .filter-group{display:flex;flex-direction:column;gap:4px}
+        .filter-btns{display:flex;gap:4px}
+        .filter-btns button{padding:4px 8px;font-size:0.75rem;background:#e9ecef;color:#333}
+        
+        /* Tabela */
+        .table-panel table{width:100%;border-collapse:collapse;table-layout:fixed}
+        .table-panel th,.table-panel td{border:1px solid var(--taura-border);padding:8px;text-align:left;font-size:0.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;position:relative}
+        .table-panel th{background:var(--taura-sidebar);user-select:none}
+        .table-panel th:hover .resizer{opacity:1}
+        .table-panel th .resizer{position:absolute;top:0;right:0;width:5px;height:100%;cursor:col-resize;user-select:none;background:transparent;opacity:0;transition:opacity .2s}
+        .table-panel th .resizer:hover{background:var(--pbi-accent-blue);opacity:1}
+        
+        /* Botão logout */
+        .logout{background:#dc3545;color:white;border:none;padding:10px 12px;cursor:pointer;border-radius:4px;width:100%;font-size:0.9rem;font-weight:500;transition:background .2s,transform .1s;white-space:nowrap;overflow:hidden}
+        .logout:hover{background:#c82333;transform:translateY(-1px)}
+        .logout:active{transform:translateY(0)}
+        .sidebar.collapsed .logout{padding:8px;font-size:1.2rem}
+        
+        /* Responsivo */
+        @media(max-width:768px){
+            .sidebar{width:100%;height:auto;position:relative}
+            .main-content{margin-left:0}
+        }
+        
+        /* Spinner de carregamento */
+        .spinner-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #e9ecef;
+            border-top: 5px solid var(--pbi-accent-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        .spinner-inline {
+            width: 20px;
+            height: 20px;
+            border: 3px solid #e9ecef;
+            border-top: 3px solid var(--pbi-accent-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 8px;
+        }
+        .spinner-text {
+            margin-top: 16px;
+            color: var(--taura-blue);
+            font-size: 1rem;
+            font-weight: 500;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Overlay de carregamento inicial -->
+    <div id="loadingOverlay" class="spinner-overlay">
+        <div class="spinner"></div>
+        <div class="spinner-text">Carregando dados...</div>
+    </div>
+    
+    <!-- Barra Superior Fixa -->
+    <header class="main-header">
+        <div class="header-left">
+            <button class="sidebar-toggle" onclick="toggleSidebar()" title="Alternar menu">
+                ☰
+            </button>
+            <span class="system-name">Atividades BDI Serra</span>
+        </div>
+        <div class="header-right">
+            <div class="user-dropdown">
+                <span class="user-name" id="userName" onclick="toggleUserMenu()">USUÁRIO DO SISTEMA</span>
+                <div class="user-menu" id="userMenu">
+                    <button class="user-menu-item logout-item" onclick="logout()">🚪 Sair</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="app-shell">
+        <aside class="sidebar" id="sidebar">
+            <nav>
+                <ul>
+                    <li><a href="#" id="menuInicio" class="active">
+                        <span class="icon">📊</span>
+                        <span class="text">Início</span>
+                    </a></li>
+                    <li><a href="#" id="menuInserir">
+                        <span class="icon">➕</span>
+                        <span class="text">Inserir Atividade</span>
+                    </a></li>
+                    <li><a href="#" id="menuAtividades">
+                        <span class="icon">📋</span>
+                        <span class="text">Atividades Cadastradas</span>
+                    </a></li>
+                    <li><a href="#" id="menuConfig">
+                        <span class="icon">⚙️</span>
+                        <span class="text">Configuração</span>
+                    </a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main-content" id="mainContent">
+            <header class="topbar">
+                <h1>📈 Dashboard - Atividades BDI Serra</h1>
+            </header>
+
+            <section class="filters-row">
+                <div class="visual-card filters">
+                    <label>Data Início <input type="date" id="dataInicio"></label>
+                    <label>Data Fim <input type="date" id="dataFim"></label>
+                    
+                    <div class="filter-group">
+                        <label>Equipes
+                            <select id="equipeSelect" multiple size="5"></select>
+                        </label>
+                        <div class="filter-btns">
+                            <button type="button" onclick="selectAll('equipeSelect')">✓ Todas</button>
+                            <button type="button" onclick="deselectAll('equipeSelect')">✗ Nenhuma</button>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label>Categorias
+                            <select id="categoriaSelect" multiple size="5"></select>
+                        </label>
+                        <div class="filter-btns">
+                            <button type="button" onclick="selectAll('categoriaSelect')">✓ Todas</button>
+                            <button type="button" onclick="deselectAll('categoriaSelect')">✗ Nenhuma</button>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label>Produtos
+                            <select id="produtoSelect" multiple size="5"></select>
+                        </label>
+                        <div class="filter-btns">
+                            <button type="button" onclick="selectAll('produtoSelect')">✓ Todas</button>
+                            <button type="button" onclick="deselectAll('produtoSelect')">✗ Nenhuma</button>
+                        </div>
+                    </div>
+                    
+                    <label>Consulta Texto <input type="search" id="consultaTexto" placeholder="Buscar texto..." /></label>
+                    
+                    <div class="filter-group" style="justify-content:flex-end">
+                        <button id="btnApply" onclick="aplicarFiltros()">🔍 Aplicar Filtros</button>
+                        <button id="btnExport" onclick="exportarPDF()">📄 Exportar PDF</button>
+                        <div id="loader" style="display:none;"><span class="spinner-inline"></span></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Título da Seção: Indicadores -->
+            <section style="background:var(--pbi-background); padding:12px 0; text-align:center;">
+                <h2 style="margin:0; color:#1b1464; font-size:1.2rem; font-weight:700;">Indicadores (filtro)</h2>
+            </section>
+
+            <section class="indicators dashboard-grid">
+                <div class="visual-card kpi-container" id="totalQTC">
+                    <div class="kpi-value">0</div>
+                    <div class="kpi-label">Total de QTCs</div>
+                </div>
+                <div class="visual-card kpi-container" id="qtInternos">
+                    <div class="kpi-value">0</div>
+                    <div class="kpi-label">QTCs Internos</div>
+                </div>
+                <div class="visual-card kpi-container" id="qtConjuntas">
+                    <div class="kpi-value">0</div>
+                    <div class="kpi-label">Ações Conjuntas</div>
+                </div>
+            </section>
+
+            <!-- Quadro de Resumo Geral (Produtos) -->
+            <section class="dashboard-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));">
+                <div class="visual-card kpi-container" id="totalVeiculos">
+                    <div class="kpi-value" style="color:#111;font-size:2.5rem;font-weight:700;">0</div>
+                    <div class="kpi-label" style="color:#666;text-transform:uppercase;font-size:0.85rem;margin-top:8px;">Veículos Recuperados</div>
+                </div>
+                <div class="visual-card kpi-container" id="totalPessoas">
+                    <div class="kpi-value" style="color:#111;font-size:2.5rem;font-weight:700;">0</div>
+                    <div class="kpi-label" style="color:#666;text-transform:uppercase;font-size:0.85rem;margin-top:8px;">Pessoas Presas</div>
+                </div>
+                <div class="visual-card kpi-container" id="totalArmas">
+                    <div class="kpi-value" style="color:#111;font-size:2.5rem;font-weight:700;">0</div>
+                    <div class="kpi-label" style="color:#666;text-transform:uppercase;font-size:0.85rem;margin-top:8px;">Armas Apreendidas</div>
+                </div>
+                <div class="visual-card kpi-container" id="totalMunicoes">
+                    <div class="kpi-value" style="color:#111;font-size:2.5rem;font-weight:700;">0</div>
+                    <div class="kpi-label" style="color:#666;text-transform:uppercase;font-size:0.85rem;margin-top:8px;">Munições</div>
+                </div>
+                <div class="visual-card kpi-container" id="totalColetivas">
+                    <div class="kpi-value" style="color:#111;font-size:2.5rem;font-weight:700;">0</div>
+                    <div class="kpi-label" style="color:#666;text-transform:uppercase;font-size:0.85rem;margin-top:8px;">Coletivas Imprensa</div>
+                </div>
+                <div class="visual-card kpi-container" id="totalDemandas">
+                    <div class="kpi-value" style="color:#111;font-size:2.5rem;font-weight:700;">0</div>
+                    <div class="kpi-label" style="color:#666;text-transform:uppercase;font-size:0.85rem;margin-top:8px;">Demandas Intel.</div>
+                </div>
+            </section>
+
+            <!-- Título da Seção: Gráficos com Filtro -->
+            <section style="background:var(--pbi-background); padding:12px 0; text-align:center;">
+                <h2 style="margin:0; color:#1b1464; font-size:1.2rem; font-weight:700;">Gráficos (filtro)</h2>
+            </section>
+
+            <!-- Gráficos -->
+            <section class="dashboard-grid" style="grid-template-columns: repeat(2, 1fr);">
+                <div class="visual-card chart-panel">
+                    <h3 style="margin:0 0 16px 0;color:#1b1464;font-size:1.1rem;font-weight:600;">Atividades por Equipe</h3>
+                    <div style="position:relative; height:300px"><canvas id="chartEquipes"></canvas></div>
+                </div>
+                <div class="visual-card chart-panel">
+                    <h3 style="margin:0 0 16px 0;color:#1b1464;font-size:1.1rem;font-weight:600;">Produtos Apreendidos no Período</h3>
+                    <div style="position:relative; height:300px"><canvas id="chartParticipacao"></canvas></div>
+                </div>
+            </section>
+            
+            <!-- Linha 6: Demandas, Documentos e Coletivas -->
+            <section class="dashboard-grid" style="grid-template-columns: repeat(3, 1fr);">
+                <div class="visual-card chart-panel">
+                    <h3 style="margin:0 0 16px 0;color:#1b1464;font-size:1.1rem;font-weight:600;">Demandas de Inteligência</h3>
+                    <div style="position:relative; height:300px"><canvas id="chartDemandas"></canvas></div>
+                </div>
+                <div class="visual-card chart-panel">
+                    <h3 style="margin:0 0 16px 0;color:#1b1464;font-size:1.1rem;font-weight:600;">Documentos de Inteligência</h3>
+                    <div style="position:relative; height:300px"><canvas id="chartDocumentos"></canvas></div>
+                </div>
+                <div class="visual-card" style="padding:24px;">
+                    <h3 style="margin:0 0 16px 0;color:#1b1464;font-size:1.1rem;font-weight:600;">Coletivas de Imprensa</h3>
+                    <div id="quadroColetivas" style="overflow-x:auto; max-height:300px; overflow-y:auto;">
+                        <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                            <thead style="position:sticky; top:0; background:#fff;">
+                                <tr style="background:#f5f5f5; text-align:left;">
+                                    <th style="padding:8px; border-bottom:2px solid #ddd; width:100px;">Data</th>
+                                    <th style="padding:8px; border-bottom:2px solid #ddd;">Descrição</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaColetivasBody">
+                                <!-- Preenchido via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Título da Seção: Gráficos Anuais -->
+            <section style="background:var(--pbi-background); padding:12px 0; text-align:center;">
+                <h2 style="margin:0; color:#1b1464; font-size:1.2rem; font-weight:700;">Gráficos (compilados anuais, sem filtro)</h2>
+            </section>
+            
+            <!-- Gráficos de Evolução Anual -->
+            <section class="dashboard-grid" style="grid-template-columns: repeat(2, 1fr);">
+                <div class="visual-card chart-panel">
+                    <h3 style="margin:0 0 16px 0;color:#1b1464;font-size:1.1rem;font-weight:600;">Evolução Anual - Veículos Recuperados</h3>
+                    <div style="position:relative; height:300px"><canvas id="chartVeiculosAnual"></canvas></div>
+                </div>
+                <div class="visual-card chart-panel">
+                    <h3 style="margin:0 0 16px 0;color:#1b1464;font-size:1.1rem;font-weight:600;">Evolução Anual - Pessoas Presas</h3>
+                    <div style="position:relative; height:300px"><canvas id="chartPessoasAnual"></canvas></div>
+                </div>
+            </section>
+
+            <!-- Quadros Estatísticos -->
+            <section class="dashboard-grid" style="grid-template-columns: repeat(2, 1fr);">
+                <!-- Quadro de QTCs por Ano -->
+                <div class="visual-card" style="padding:24px;">
+                    <h3 style="margin:0 0 16px 0;color:#1b1464;font-size:1.1rem;font-weight:600;">QTCs por Ano</h3>
+                    <div id="quadroQTCs" style="overflow-x:auto;">
+                        <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+                            <thead>
+                                <tr style="background:#f5f5f5; text-align:left;">
+                                    <!-- Cabeçalho preenchido via JS com os anos -->
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaQTCsBody">
+                                <!-- Preenchido via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Quadro de Resultados Operacionais -->
+                <div class="visual-card" style="padding:24px;">
+                    <h3 style="margin:0 0 16px 0;color:#1b1464;font-size:1.1rem;font-weight:600;">Resultados Operacionais</h3>
+                    <div id="quadroResultados" style="overflow-x:auto; max-height:400px; overflow-y:auto;">
+                        <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                            <thead style="position:sticky; top:0; background:#fff;">
+                                <tr style="background:#f5f5f5; text-align:left;">
+                                    <th style="padding:8px; border-bottom:2px solid #ddd;">Produto</th>
+                                    <th style="padding:8px; border-bottom:2px solid #ddd;">Categoria</th>
+                                    <!-- Anos dinâmicos preenchidos via JS -->
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaResultadosBody">
+                                <!-- Preenchido via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Quadros de Drogas e Material Bélico -->
+            <section class="dashboard-grid" style="grid-template-columns: repeat(2, 1fr);">
+                <!-- Quadro de Drogas Apreendidas -->
+                <div class="visual-card" style="padding:24px;">
+                    <h3 style="margin:0 0 16px 0;color:#1b1464;font-size:1.1rem;font-weight:600;">Drogas Apreendidas</h3>
+                    <div id="quadroDrogas" style="overflow-x:auto; max-height:400px; overflow-y:auto;">
+                        <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                            <thead style="position:sticky; top:0; background:#fff;">
+                                <tr style="background:#f5f5f5; text-align:left;">
+                                    <th style="padding:8px; border-bottom:2px solid #ddd; position:sticky; left:0; background:#f5f5f5; z-index:2;">Produto</th>
+                                    <!-- Anos dinâmicos preenchidos via JS -->
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaDrogasBody">
+                                <!-- Preenchido via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Quadro de Material Bélico -->
+                <div class="visual-card" style="padding:24px;">
+                    <h3 style="margin:0 0 16px 0;color:#1b1464;font-size:1.1rem;font-weight:600;">Material Bélico</h3>
+                    <div id="quadroMaterialBelico" style="overflow-x:auto; max-height:400px; overflow-y:auto;">
+                        <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                            <thead style="position:sticky; top:0; background:#fff;">
+                                <tr style="background:#f5f5f5; text-align:left;">
+                                    <th style="padding:8px; border-bottom:2px solid #ddd; position:sticky; left:0; background:#f5f5f5; z-index:2;">Produto</th>
+                                    <!-- Anos dinâmicos preenchidos via JS -->
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaMaterialBelicoBody">
+                                <!-- Preenchido via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Botão para Abrir Lista -->
+            <section class="visual-card" style="text-align:center; padding:16px; margin-top:8px;">
+                <button onclick="abrirListaAtividades()" class="btn-primary" style="padding:15px 30px; font-size:1.1rem;">
+                    📋 Abrir Lista de Atividades
+                </button>
+                <p style="margin-top:10px; color:#666; font-size:0.9rem;">Clique para ver a lista completa de atividades com os filtros aplicados</p>
+            </section>
+            
+        </main>
+    </div>
+
+    <script>
+        // Toggle da sidebar
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            sidebar.classList.toggle('collapsed');
+            mainContent.classList.toggle('expanded');
+        }
+        
+        // Toggle do menu de usuário
+        function toggleUserMenu() {
+            const menu = document.getElementById('userMenu');
+            menu.classList.toggle('show');
+        }
+        
+        // Fechar menu ao clicar fora
+        document.addEventListener('click', function(event) {
+            const userDropdown = document.querySelector('.user-dropdown');
+            const userMenu = document.getElementById('userMenu');
+            if (userDropdown && !userDropdown.contains(event.target)) {
+                userMenu.classList.remove('show');
+            }
+        });
+        
+        // Carregar nome do usuário do token
+        async function loadUserName() {
+            console.log('🚀 Iniciando loadUserName()...');
+            try {
+                // Primeiro, tenta pegar do localStorage (salvo no login)
+                const userStr = localStorage.getItem('user');
+                if (userStr) {
+                    try {
+                        const user = JSON.parse(userStr);
+                        if (user && user.nome) {
+                            document.getElementById('userName').textContent = user.nome.toUpperCase();
+                            console.log('✅ Nome carregado do localStorage:', user.nome);
+                            return;
+                        }
+                    } catch (e) {
+                        console.warn('⚠️ Erro ao parsear user do localStorage:', e);
+                    }
+                }
+                
+                // Se não tem no localStorage, busca pela API
+                const token = localStorage.getItem('token');
+                console.log('🔑 Token encontrado:', token ? 'Sim' : 'Não');
+                if (!token) {
+                    console.log('⚠️ Sem token - não é possível carregar nome');
+                    return;
+                }
+                
+                // Decodificar o payload do JWT (sem validar assinatura - apenas para ler dados)
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                
+                const payload = JSON.parse(jsonPayload);
+                const email = payload.sub;
+                console.log('📧 Email do token:', email);
+                
+                // Buscar dados do usuário pelo email específico
+                const emailEncoded = encodeURIComponent(email);
+                const response = await fetch(`${window.location.origin}/usuarios/${emailEncoded}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                console.log('🌐 Response status:', response.status);
+                
+                if (response.ok) {
+                    const usuario = await response.json();
+                    console.log('👤 Usuário encontrado:', usuario);
+                    if (usuario && usuario.nome) {
+                        document.getElementById('userName').textContent = usuario.nome.toUpperCase();
+                        localStorage.setItem('user_name', usuario.nome);
+                        console.log('✅ Nome atualizado:', usuario.nome.toUpperCase());
+                    } else {
+                        console.warn('⚠️ Usuário não tem nome');
+                    }
+                } else {
+                    console.error('❌ Erro na resposta da API:', response.statusText);
+                }
+            } catch (error) {
+                console.error('❌ Erro ao carregar nome do usuário:', error);
+                // Fallback para nome salvo no localStorage
+                const savedName = localStorage.getItem('user_name');
+                if (savedName) {
+                    document.getElementById('userName').textContent = savedName.toUpperCase();
+                    console.log('💾 Nome do localStorage:', savedName.toUpperCase());
+                }
+            }
+        }
+        
+        // Verificar autenticação antes de carregar a página
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                console.log('❌ Sem token - redirecionando para login');
+                window.location.href = '/static/login-google.html';
+                return false;
+            }
+            return true;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🎯 DOMContentLoaded disparado!');
+            loadUserName(); // Sempre tenta carregar o nome
+            if (!checkAuth()) {
+                console.log('❌ checkAuth falhou - mas nome já foi carregado');
+            }
+        });
+    </script>
+    <script src="static/script.js?v=1736720000"></script>
+    <script src="/static/script-crud.js?v=1736720000"></script>
+</body>
+</html>

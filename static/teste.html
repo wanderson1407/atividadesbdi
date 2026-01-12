@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Teste de API</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        pre { background: #f4f4f4; padding: 10px; overflow: auto; max-height: 400px; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Teste de API - Atividades BDI Serra</h1>
+    
+    <h2>1. Token</h2>
+    <p>Token atual: <code id="tokenDisplay">-</code></p>
+    <button onclick="obterToken()">Obter Novo Token</button>
+    <button onclick="limparToken()">Limpar Token</button>
+    
+    <h2>2. Testes de API</h2>
+    <button onclick="testarEquipes()">Testar /equipes</button>
+    <button onclick="testarCategorias()">Testar /categorias</button>
+    <button onclick="testarProdutos()">Testar /produtos</button>
+    <button onclick="testarAtividades()">Testar /atividades (2025)</button>
+    
+    <h2>3. Resultado</h2>
+    <pre id="resultado">Clique em um botão para testar...</pre>
+    
+    <script>
+        const API_BASE = window.location.origin;
+        
+        function atualizarTokenDisplay() {
+            const token = localStorage.getItem('token');
+            document.getElementById('tokenDisplay').textContent = token ? token.substring(0, 50) + '...' : 'NENHUM';
+        }
+        
+        atualizarTokenDisplay();
+        
+        async function obterToken() {
+            try {
+                const resp = await fetch('/auth/google', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ token: 'dummy_token' })
+                });
+                const data = await resp.json();
+                if (resp.ok && data.access_token) {
+                    localStorage.setItem('token', data.access_token);
+                    document.getElementById('resultado').innerHTML = '<span class="success">Token obtido com sucesso!</span>\n' + JSON.stringify(data, null, 2);
+                    atualizarTokenDisplay();
+                } else {
+                    document.getElementById('resultado').innerHTML = '<span class="error">Erro ao obter token:</span>\n' + JSON.stringify(data, null, 2);
+                }
+            } catch (e) {
+                document.getElementById('resultado').innerHTML = '<span class="error">Exceção:</span>\n' + e.message;
+            }
+        }
+        
+        function limparToken() {
+            localStorage.removeItem('token');
+            atualizarTokenDisplay();
+            document.getElementById('resultado').textContent = 'Token removido.';
+        }
+        
+        async function testarAPI(endpoint) {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                document.getElementById('resultado').innerHTML = '<span class="error">Sem token! Clique em "Obter Novo Token" primeiro.</span>';
+                return;
+            }
+            try {
+                const resp = await fetch(`${API_BASE}${endpoint}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await resp.json();
+                if (resp.ok) {
+                    document.getElementById('resultado').innerHTML = `<span class="success">Sucesso! ${endpoint} retornou ${Array.isArray(data) ? data.length : 1} item(s):</span>\n` + JSON.stringify(data.slice ? data.slice(0, 5) : data, null, 2);
+                } else {
+                    document.getElementById('resultado').innerHTML = `<span class="error">Erro ${resp.status}:</span>\n` + JSON.stringify(data, null, 2);
+                }
+            } catch (e) {
+                document.getElementById('resultado').innerHTML = '<span class="error">Exceção:</span>\n' + e.message;
+            }
+        }
+        
+        function testarEquipes() { testarAPI('/equipes'); }
+        function testarCategorias() { testarAPI('/categorias'); }
+        function testarProdutos() { testarAPI('/produtos'); }
+        function testarAtividades() { testarAPI('/atividades?data_inicio=2025-01-01&data_fim=2025-12-31'); }
+    </script>
+</body>
+</html>

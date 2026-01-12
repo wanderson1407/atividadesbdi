@@ -1,0 +1,46 @@
+id_produto_atividade,id_categoria_atividade,produto_atividade,medida,tipo_numero
+1,1,FACA / FACÃO / CANIVETE,unidade,inteiro
+2,2,ARMA CURTA,unidade,inteiro
+3,2,ARMA LONGA,unidade,inteiro
+4,2,MUNIÇÃO ARMA CURTA,unidade,inteiro
+5,2,MUNIÇÃO ARMA LONGA,unidade,inteiro
+6,2,CARREGADOR,unidade,inteiro
+7,6,CARTÃO BENEFÍCIO ES SOLIDÁRIO,unidade,inteiro
+8,3,DEMANDA DELEGACIA,unidade,inteiro
+9,3,DEMANDA SEINT,unidade,inteiro
+10,3,MANIFESTAÇÃO,unidade,inteiro
+11,3,TREINAMENTO,unidade,inteiro
+12,3,OPERAÇÃO DE INTELIGÊNCIA,unidade,inteiro
+13,11,ENCAMINHAMENTO POR ENVOLVIMENTO EM CRIME DIVERSO,unidade,inteiro
+14,11,FURTO QUALIFICADO,unidade,inteiro
+15,11,APROPRIAÇÃO INDÉBITA,unidade,inteiro
+16,11,RECUPERAÇÃO DE VEÍCULO ROUBO/FURTO NA PLACA,unidade,inteiro
+17,11,CLONE / ADULTERAÇÃO DE SINAIS DE IDENTIFICAÇÃO,unidade,inteiro
+18,7,PRESOS EM FLAGRANTE,unidade,inteiro
+19,7,CUMPRIMENTO DE MANDADO DE PRISÃO EM ABERTO,unidade,inteiro
+20,7,ADOLESCENTE APREENDIDO,unidade,inteiro
+21,2,MATERIAL EXPLOSIVO E OUTROS,unidade,inteiro
+22,5,MACONHA,gramas,inteiro
+23,5,COCAÍNA,gramas,inteiro
+24,5,ANFETAMINA,unidade,inteiro
+25,5,HAXIXE,gramas,inteiro
+26,6,FERRO GUSA,quilograma,decimal
+27,12,REAL,unidade,moeda
+28,6,CIGARRO,maços,inteiro
+29,4,DOCUMENTOS,unidade,inteiro
+30,4,CARTÃO BENEFÍCIO ES SOLIDÁRIO,unidade,inteiro
+31,6,APARELHO CELULAR,unidade,inteiro
+32,9,COMBUSTÍVEL,litros,decimal
+33,3,DOC DE INTELIGÊNCIA- MENSAGEM,unidade,inteiro
+34,3,DOC DE INTELIGÊNCIA - RELINT,unidade,inteiro
+35,3,DOC DE INTELIGÊNCIA - REMI,unidade,inteiro
+36,3,DOC DE INTELIGÊNCIA - POI,unidade,inteiro
+37,3,DOC DE INTELIGÊNCIA - PI,unidade,inteiro
+38,3,DOC DE INTELIGÊNCIA - PESQUISA SOCIAL,unidade,inteiro
+39,8,ANÁLISE DE FLUXO POR SOLICITAÇÃO,unidade,inteiro
+40,8,AUTO DE INFRAÇÃO,unidade,inteiro
+41,8,RRD,unidade,inteiro
+42,8,TCO,unidade,inteiro
+43,10,COLETIVA DE IMPRENSA,unidade,inteiro
+44,12,DÓLAR,unidade,moeda
+45,12,PESO,unidade,moeda

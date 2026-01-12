@@ -1,0 +1,13 @@
+id_categoria_atividade,categoria_atividade,interno_bdi
+1,ARMA BRANCA,não
+2,MATERIAL BÉLICO,não
+3,DEMANDAS INTELIGÊNCIA,sim
+4,DOCUMENTOS,não
+5,DROGAS,não
+6,OBJETOS,não
+7,PESSOAS,não
+8,SEGURANÇA VIÁRIA,não
+9,COMBUSTÍVEL,não
+10,COLETIVA DE IMPRENSA,sim
+11,VEÍCULOS,não
+12,MOEDA,não

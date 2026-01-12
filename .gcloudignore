@@ -1,0 +1,102 @@
+# Arquivos e diretórios que NÃO devem ser enviados no deploy do Google Cloud
+# Similar ao .gitignore, mas específico para o Google Cloud Platform
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Ambiente virtual
+venv/
+.venv/
+virtualenv/
+
+# Variáveis de ambiente locais
+.env
+.env.local
+.env.*.local
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testes
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+.hypothesis/
+.tox/
+
+# Logs
+*.log
+logs/
+
+# Dados de desenvolvimento/mock
+mock_firestore_atividades-bdi.json
+_tmp_*.py
+
+# Arquivos de exemplo e documentação de desenvolvimento
+README.md
+DEPLOY_PRODUCTION.md
+MANUS_MAPPING.md
+MAPA_DASHBOARD.md
+MARCA_*.md
+exemplohtml.md
+
+# Scripts de utilitários locais
+download_firestore_to_mock.py
+create_usuarios.py
+migrate_firestore.py
+populate_data.py
+test_*.py
+import_csv_data.py
+
+# Planilhas CSV
+planilhas/
+
+# Arquetipo raiz (exemplos) - mas NÃO excluir static/arquetipo!
+arquetipo/
+!static/arquetipo/
+
+# Credenciais locais (já devem estar configuradas no GCP)
+*.json
+!app.yaml
+
+# Configurações de workspace
+main.code-workspace
+desktop.ini
+
+# Scripts batch locais
+*.bat
+
+# Arquivos HTML temporários ou de teste
+teste.html
+autologin.html
+
+# NÃO excluir Dockerfile - necessário para Cloud Run!
+# Dockerfile

@@ -1,0 +1,69 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+.pytest_cache/
+.coverage
+
+# Ambiente virtual
+venv/
+.venv/
+
+# Variáveis de ambiente locais
+.env
+.env.local
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Git
+.git/
+.gitignore
+
+# Documentação e exemplos
+README.md
+DEPLOY_PRODUCTION.md
+GUIA_DEPLOY_GOOGLE_CLOUD.md
+MANUS_MAPPING.md
+MAPA_DASHBOARD.md
+MARCA_*.md
+exemplohtml.md
+
+# Scripts de desenvolvimento
+download_firestore_to_mock.py
+create_usuarios.py
+migrate_firestore.py
+populate_data.py
+test_*.py
+import_csv_data.py
+_tmp_*.py
+
+# Dados de desenvolvimento
+mock_firestore_atividades-bdi.json
+planilhas/
+arquetipo/
+!static/arquetipo/
+
+# Credenciais (já configuradas no Cloud Run)
+*.json
+
+# Workspace
+main.code-workspace
+desktop.ini
+*.bat
+
+# Cloud
+.gcloudignore
+app.yaml
+
+# NÃO excluir o Dockerfile!
+# Dockerfile

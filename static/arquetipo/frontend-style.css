@@ -1,0 +1,53 @@
+/* DESIGN SYSTEM: ATIVIDADES BDI SERRA */
+:root {
+    /* Identidade Taura (Navegação) */
+    --taura-blue: #1b1464;
+    --taura-sidebar: #f2f2f2;
+    --taura-border: #dee2e6;
+
+    /* Estética Analytics/PBI (Conteúdo Central) */
+    --pbi-card-bg: #ffffff;
+    --pbi-indicator-label: #666666;
+    --pbi-indicator-value: #111111;
+    --pbi-accent-blue: #005a9e;
+    --pbi-background: #f3f2f1; /* Fundo levemente cinza do PBI */
+}
+
+/* Estrutura de Cards do Analytics */
+.visual-card {
+    background: var(--pbi-card-bg);
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    padding: 15px;
+    margin-bottom: 0;
+    border: 1px solid transparent;
+}
+
+/* Formatação de Indicadores (KPIs) */
+.kpi-container {
+    text-align: center;
+}
+
+.kpi-value {
+    font-family: 'Segoe UI', wf_segoe-ui_normal, helvetica, arial, sans-serif;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--pbi-indicator-value);
+    display: block;
+}
+
+.kpi-label {
+    font-size: 12px;
+    color: var(--pbi-indicator-label);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Layout de Grade Central */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 8px;
+    padding: 0;
+    margin-bottom: 8px; /* Espaçamento vertical entre linhas */
+}

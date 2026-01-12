@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Atividades BDI Serra</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            width: 360px;
+            text-align: center;
+        }
+        h2 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+        .error {
+            color: #e74c3c;
+            background: #fadbd8;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .success {
+            color: #27ae60;
+            background: #d4efdf;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        #google-signin-button {
+            margin: 20px auto;
+        }
+        .dev-mode {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        .dev-mode input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+        .dev-mode button {
+            width: 100%;
+            padding: 12px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .dev-mode button:hover {
+            background: #2980b9;
+        }
+        .info {
+            font-size: 12px;
+            color: #999;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h2>🏢 Atividades BDI Serra</h2>
+        <p class="subtitle">Faça login com sua conta Google</p>
+        
+        <div id="error" class="error"></div>
+        <div id="success" class="success"></div>
+        
+        <!-- Botão de login do Google -->
+        <div id="google-signin-button"></div>
+        
+        <!-- Modo de desenvolvimento (somente se DEV_AUTH=true no backend) -->
+        <div class="dev-mode" id="dev-mode" style="display: none;">
+            <p style="color: #e67e22; font-size: 12px;"><strong>⚠️ MODO DESENVOLVIMENTO</strong></p>
+            <input type="email" id="dev-email" placeholder="Email de desenvolvimento">
+            <button onclick="devLogin()">Login Dev (Simulado)</button>
+        </div>
+        
+        <p class="info">Apenas usuários autorizados podem acessar</p>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        
+        // Substituir YOUR_GOOGLE_CLIENT_ID pela variável de ambiente
+        // Você precisa configurar isso no Google Cloud Console
+        const GOOGLE_CLIENT_ID = '945799576026-7dp9aeogap6hmrldi4kpedchitnirci5.apps.googleusercontent.com';
+        
+        // Verificar se está em modo dev
+        let devMode = false;
+        
+        // Inicializar Google Sign-In
+        function initializeGoogleSignIn() {
+            google.accounts.id.initialize({
+                client_id: GOOGLE_CLIENT_ID,
+                callback: handleCredentialResponse,
+                auto_select: false,
+                cancel_on_tap_outside: true
+            });
+            
+            google.accounts.id.renderButton(
+                document.getElementById('google-signin-button'),
+                { 
+                    theme: 'outline', 
+                    size: 'large',
+                    text: 'signin_with',
+                    locale: 'pt-BR',
+                    width: 280
+                }
+            );
+            
+            // Prompt para login automático se não estiver logado
+            google.accounts.id.prompt();
+        }
+        
+        // Callback quando o usuário faz login com Google
+        async function handleCredentialResponse(response) {
+            showMessage('success', 'Autenticando...');
+            
+            try {
+                const res = await fetch(`${API_BASE}/auth/google`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: response.credential })
+                });
+                
+                const data = await res.json();
+                
+                if (res.ok && data.access_token) {
+                    localStorage.setItem('token', data.access_token);
+                    localStorage.setItem('user', JSON.stringify(data.user));                    localStorage.setItem('user_name', data.user.nome || 'Usuário');
+                    console.log('✅ Login DEV bem-sucedido:', data.user.email, 'Nível:', data.user.nivel);                    localStorage.setItem('user_name', data.user.nome || 'Usuário');
+                    console.log('✅ Login Google OAuth bem-sucedido:', data.user.email, 'Nível:', data.user.nivel);
+                    showMessage('success', 'Login bem-sucedido! Redirecionando...');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1000);
+                } else {
+                    const msg = data.detail || 'Erro ao autenticar';
+                    showMessage('error', msg);
+                }
+            } catch (error) {
+                showMessage('error', 'Erro de conexão: ' + error.message);
+            }
+        }
+        
+        // Login de desenvolvimento (apenas para testes)
+        async function devLogin() {
+            const email = document.getElementById('dev-email').value;
+            if (!email) {
+                showMessage('error', 'Digite um email');
+                return;
+            }
+            
+            showMessage('success', 'Autenticando em modo DEV...');
+            
+            try {
+                const res = await fetch(`${API_BASE}/auth/google`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: 'dummy_token' })
+                });
+                
+                const data = await res.json();
+                
+                if (res.ok && data.access_token) {
+                    localStorage.setItem('token', data.access_token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    showMessage('success', 'Login bem-sucedido! Redirecionando...');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1000);
+                } else {
+                    const msg = data.detail || 'Erro ao autenticar';
+                    showMessage('error', msg);
+                }
+            } catch (error) {
+                showMessage('error', 'Erro de conexão: ' + error.message);
+            }
+        }
+        
+        // Verificar se modo dev está habilitado
+        async function checkDevMode() {
+            try {
+                const res = await fetch(`${API_BASE}/auth/dev-status`);
+                const data = await res.json();
+                devMode = data.dev_mode;
+                if (devMode) {
+                    document.getElementById('dev-mode').style.display = 'block';
+                }
+            } catch (error) {
+                console.log('Não foi possível verificar modo dev');
+            }
+        }
+        
+        function showMessage(type, message) {
+            const errorDiv = document.getElementById('error');
+            const successDiv = document.getElementById('success');
+            
+            errorDiv.style.display = 'none';
+            successDiv.style.display = 'none';
+            
+            if (type === 'error') {
+                errorDiv.textContent = message;
+                errorDiv.style.display = 'block';
+            } else {
+                successDiv.textContent = message;
+                successDiv.style.display = 'block';
+            }
+        }
+        
+        // Inicializar quando a página carregar
+        window.onload = function() {
+            checkDevMode();
+            
+            // Aguardar o script do Google carregar
+            const waitForGoogle = setInterval(() => {
+                if (typeof google !== 'undefined' && google.accounts) {
+                    clearInterval(waitForGoogle);
+                    initializeGoogleSignIn();
+                }
+            }, 100);
+            
+            // Timeout após 5 segundos
+            setTimeout(() => {
+                if (typeof google === 'undefined') {
+                    clearInterval(waitForGoogle);
+                    showMessage('error', 'Erro ao carregar Google Sign-In. Verifique sua conexão.');
+                }
+            }, 5000);
+        };
+    </script>
+</body>
+</html>

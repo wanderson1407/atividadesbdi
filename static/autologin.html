@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Autologin - Atividades BDI Serra</title>
+  <style>body{font-family:Arial,Helvetica,sans-serif;padding:20px;background:#f3f2f1} .card{background:white;padding:16px;border-radius:6px;max-width:720px;margin:40px auto;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.08)}</style>
+</head>
+<body>
+  <div class="card">
+    <h2>Autologin (desenvolvimento)</h2>
+    <p id="status">Tentando obter token e redirecionar...</p>
+    <p>Se não redirecionar automaticamente, clique em <button id="btnTry">Tentar</button></p>
+  </div>
+
+  <script>
+    async function doAuto(){
+      try{
+        const resp = await fetch('/auth/google', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ token: 'dummy_token' })
+        });
+        const data = await resp.json();
+        if (resp.ok && data.access_token){
+          localStorage.setItem('token', data.access_token);
+          document.getElementById('status').innerText = 'Token salvo; redirecionando...';
+          setTimeout(()=> window.location.href='/', 600);
+        } else {
+          document.getElementById('status').innerText = data.detail || data.error || 'Falha ao obter token';
+        }
+      }catch(e){
+        document.getElementById('status').innerText = 'Erro: '+(e.message||e);
+      }
+    }
+    document.getElementById('btnTry').addEventListener('click', doAuto);
+    window.addEventListener('DOMContentLoaded', doAuto);
+  </script>
+</body>
+</html>

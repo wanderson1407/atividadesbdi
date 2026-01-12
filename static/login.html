@@ -1,0 +1,58 @@
+﻿<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Atividades BDI Serra</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .login-container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); width: 300px; }
+        h2 { text-align: center; }
+        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; }
+        button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .error { color: red; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h2>Login</h2>
+        <div id="error" class="error"></div>
+        <input type="email" id="email" placeholder="Email" required>
+        <button onclick="login()">Entrar</button>
+    </div>
+    <script>
+        const API_BASE = window.location.origin;
+        async function login() {
+            const email = document.getElementById('email').value;
+            if (!email) {
+                document.getElementById('error').innerText = 'Digite o email';
+                return;
+            }
+            try {
+                const response = await fetch(`${API_BASE}/auth/google`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: 'dummy_token' })
+                });
+                const data = await response.json();
+                if (response.ok && data.access_token) {
+                    localStorage.setItem('token', data.access_token);
+                    // Salvar dados do usuário no localStorage
+                    if (data.user) {
+                        localStorage.setItem('user', JSON.stringify(data.user));
+                        localStorage.setItem('user_name', data.user.nome || 'Usuário');
+                        console.log('✅ Login bem-sucedido:', data.user.email, 'Nível:', data.user.nivel);
+                    }
+                    window.location.href = '/';
+                } else {
+                    const msg = data.detail || data.error || 'Login falhou';
+                    document.getElementById('error').innerText = msg;
+                }
+            } catch (error) {
+                document.getElementById('error').innerText = 'Erro no login: ' + (error.message || error);
+            }
+        }
+    </script>
+</body>
+</html>
