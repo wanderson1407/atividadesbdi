@@ -14,10 +14,19 @@ function checkAuth() {
 }
 
 function logout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('user_name');
-    window.location.href = '/static/login-google.html';
+    console.log('🚪 Executando logout...');
+    try {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('user_name');
+        console.log('✅ localStorage limpo com sucesso');
+        console.log('🔄 Redirecionando para login...');
+        window.location.replace('/static/login-google.html');
+    } catch (error) {
+        console.error('❌ Erro no logout:', error);
+        // Forçar redirecionamento mesmo com erro
+        window.location.replace('/static/login-google.html');
+    }
 }
 
 async function loadUserName() {
@@ -120,6 +129,12 @@ async function fetchData(endpoint) {
                 'Authorization': `Bearer ${token}`
             }
         });
+        if (response.status === 401) {
+            console.error('❌ Token inválido ou expirado (401). Redirecionando para login...');
+            alert('Sua sessão expirou. Por favor, faça login novamente.');
+            logout();
+            throw new Error('Token expirado');
+        }
         if (!response.ok) {
             throw new Error('Erro na requisição');
         }
@@ -567,7 +582,11 @@ function showInserirAtividade(){
             });
             if (resp.ok) {
                 alert('Atividade salva com sucesso!');
-                showDashboard();
+                // Limpar formulário para nova atividade ao invés de voltar ao dashboard
+                document.getElementById('formNovaAtividade').reset();
+                document.getElementById('produtosQuantidades').innerHTML = '';
+                // Scroll para o topo
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             } else {
                 const err = await resp.json();
                 alert('Erro: ' + (err.detail || 'Falha ao salvar'));

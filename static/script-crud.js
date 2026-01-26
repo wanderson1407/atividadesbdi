@@ -71,7 +71,7 @@ async function carregarListaEquipes() {
 async function editarEquipe(id) {
     try {
         const equipes = await fetchData('/equipes');
-        const equipe = equipes[id];
+        const equipe = equipes.find(e => e.id_equipe == id);
         
         if (!equipe) {
             alert('Equipe não encontrada');
@@ -163,7 +163,7 @@ async function carregarListaCategorias() {
 async function editarCategoria(id) {
     try {
         const categorias = await fetchData('/categorias');
-        const categoria = categorias[id];
+        const categoria = categorias.find(c => c.id_categoria_atividade == id);
         
         if (!categoria) {
             alert('Categoria não encontrada');
@@ -431,6 +431,25 @@ function cancelarEdicaoUsuario() {
 
 async function editarAtividade(id) {
     try {
+        // Marcar que está editando da lista (para voltar à lista após salvar)
+        localStorage.setItem('editingFromList', 'true');
+        
+        // Salvar estado atual da lista (filtros + dados)
+        const filtrosAtuais = {
+            dataInicio: document.getElementById('listaDataInicio')?.value,
+            dataFim: document.getElementById('listaDataFim')?.value,
+            equipe: Array.from(document.getElementById('listaEquipeSelect')?.selectedOptions || []).map(o => o.value),
+            categoria: Array.from(document.getElementById('listaCategoriaSelect')?.selectedOptions || []).map(o => o.value),
+            produto: Array.from(document.getElementById('listaProdutoSelect')?.selectedOptions || []).map(o => o.value),
+            consultaTexto: document.getElementById('buscaAtividades')?.value
+        };
+        localStorage.setItem('listaAtividadesFiltros', JSON.stringify(filtrosAtuais));
+        
+        // Salvar atividades já carregadas (se existirem)
+        if (typeof atividadesListaGlobal !== 'undefined' && atividadesListaGlobal.length > 0) {
+            localStorage.setItem('listaAtividadesDados', JSON.stringify(atividadesListaGlobal));
+        }
+        
         // Buscar dados da atividade
         const response = await fetch(`${API_BASE}/atividades?id_atividade=${id}`, {
             headers: { 'Authorization': `Bearer ${token}` }

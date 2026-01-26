@@ -110,16 +110,16 @@ from typing import List, Optional
 from datetime import date
 
 class Equipe(BaseModel):
-    id_equipe: int
+    id_equipe: Optional[int] = None
     equipe: str
     interno_prf: bool
 
 class Categoria(BaseModel):
-    id_categoria_atividade: int
+    id_categoria_atividade: Optional[int] = None
     categoria_atividade: str
 
 class Produto(BaseModel):
-    id_produto_atividade: int
+    id_produto_atividade: Optional[int] = None
     id_categoria_atividade: int
     produto_atividade: str
     medida: str

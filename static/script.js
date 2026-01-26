@@ -30,10 +30,19 @@ function checkAuth() {
 }
 
 function logout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('user_name');
-    window.location.href = '/static/login-google.html';
+    console.log('🚪 Executando logout...');
+    try {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('user_name');
+        console.log('✅ localStorage limpo com sucesso');
+        console.log('🔄 Redirecionando para login...');
+        window.location.replace('/static/login-google.html');
+    } catch (error) {
+        console.error('❌ Erro no logout:', error);
+        // Forçar redirecionamento mesmo com erro
+        window.location.replace('/static/login-google.html');
+    }
 }
 
 function showLoader() {
@@ -83,14 +92,20 @@ async function fetchData(endpoint, retryCount = 0) {
             }
         });
         
+        if (response.status === 401) {
+            // Token inválido ou expirado
+            console.error('❌ Token inválido ou expirado (401). Redirecionando para login...');
+            alert('Sua sessão expirou. Por favor, faça login novamente.');
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('user_name');
+            window.location.replace('/static/login-google.html');
+            throw new Error('Token expirado');
+        }
+        
         if (!response.ok) {
             const errorText = await response.text();
             console.error(`Erro na requisição ${endpoint}: ${response.status} - ${errorText}`);
-            if (response.status === 401) {
-                // Token inválido ou expirado
-                localStorage.removeItem('token');
-                window.location.href = '/static/autologin.html';
-            }
             throw new Error(`Erro ${response.status}: ${errorText}`);
         }
         return await response.json();
@@ -2288,7 +2303,7 @@ function showInserirAtividade(){
                 
                 <div style="margin-top:24px;">
                     <button type="submit" style="padding:10px 24px;background:var(--pbi-accent-blue);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:16px;">Salvar Atividade</button>
-                    <button type="button" onclick="showDashboard()" style="padding:10px 24px;margin-left:10px;font-size:16px;">Cancelar</button>
+                    <button type="button" onclick="cancelarEdicaoAtividade()" style="padding:10px 24px;margin-left:10px;font-size:16px;">Cancelar</button>
                 </div>
             </form>
         </section>
@@ -2442,8 +2457,50 @@ function showInserirAtividade(){
                     clearCache();
                 }
                 
-                alert(`Atividade ${isEdit ? 'atualizada' : 'salva'} com sucesso!`);
-                showDashboard();
+                // Verificar se está editando da lista
+                const editingFromList = localStorage.getItem('editingFromList') === 'true';
+                
+                if (editingFromList) {
+                    // FLUXO EDIÇÃO: Atualizar dados salvos e voltar à lista
+                    console.log('🔄 Atualizando atividade na lista salva...', atividadeSalva);
+                    const dadosSalvos = localStorage.getItem('listaAtividadesDados');
+                    if (dadosSalvos) {
+                        // Atualizar o item na lista salva
+                        const listaAtual = JSON.parse(dadosSalvos);
+                        const index = listaAtual.findIndex(a => a.id_atividade === atividadeSalva.id_atividade);
+                        console.log(`📍 Índice encontrado: ${index} de ${listaAtual.length} atividades`);
+                        
+                        if (index !== -1) {
+                            console.log('📝 Dados ANTES:', JSON.stringify(listaAtual[index]).substring(0, 100));
+                            listaAtual[index] = atividadeSalva;
+                            console.log('📝 Dados DEPOIS:', JSON.stringify(listaAtual[index]).substring(0, 100));
+                            localStorage.setItem('listaAtividadesDados', JSON.stringify(listaAtual));
+                            console.log('✅ Lista atualizada no localStorage');
+                        } else {
+                            console.warn('⚠️ Atividade não encontrada na lista para atualizar!');
+                        }
+                    } else {
+                        console.warn('⚠️ Nenhum dado salvo encontrado no localStorage');
+                    }
+                    
+                    // Marcar como retornando para acionar restauração
+                    localStorage.setItem('editingFromList', 'retornando');
+                    alert(`Atividade atualizada com sucesso!`);
+                    showAtividadesCadastradas(); // Volta à lista (restaura do cache)
+                } else {
+                    // FLUXO INSERIR NOVA: Limpar formulário e permanecer na tela
+                    alert(`Atividade salva com sucesso!`);
+                    
+                    // Limpar formulário para nova atividade
+                    document.getElementById('formNovaAtividade').reset();
+                    document.getElementById('produtosRows').innerHTML = '';
+                    
+                    // Scroll para o topo
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            } else if (resp.status === 401) {
+                alert('Sua sessão expirou. Por favor, faça login novamente.');
+                logout();
             } else {
                 const err = await resp.json();
                 alert('Erro: ' + (err.detail || 'Falha ao salvar'));
@@ -2619,8 +2676,27 @@ function addProdutoRow() {
     });
 }
 
+function cancelarEdicaoAtividade() {
+    const editingFromList = localStorage.getItem('editingFromList') === 'true';
+    
+    if (editingFromList) {
+        // Estava editando da lista: marcar como retornando e voltar à lista
+        localStorage.setItem('editingFromList', 'retornando');
+        showAtividadesCadastradas();
+    } else {
+        // Estava inserindo novo: voltar ao dashboard
+        showDashboard();
+    }
+}
+
 function showAtividadesCadastradas(){
     const main = document.querySelector('.main-content');
+    
+    // Verificar se está voltando de uma edição
+    const voltandoDeEdicao = localStorage.getItem('editingFromList') === 'retornando';
+    const filtrosSalvos = localStorage.getItem('listaAtividadesFiltros');
+    const dadosSalvos = localStorage.getItem('listaAtividadesDados');
+    
     main.innerHTML = `
         <header class="topbar"><h1>Atividades Cadastradas</h1></header>
         
@@ -2782,6 +2858,52 @@ function showAtividadesCadastradas(){
     
     // Carregar dados dos filtros
     carregarDadosFiltros().then(() => {
+        // Verificar se está voltando de edição com dados salvos
+        if (voltandoDeEdicao && filtrosSalvos && dadosSalvos) {
+            console.log('🔄 Restaurando lista após edição...');
+            
+            // Limpar flags
+            localStorage.removeItem('editingFromList');
+            localStorage.removeItem('listaAtividadesFiltros');
+            localStorage.removeItem('listaAtividadesDados');
+            
+            // Restaurar filtros
+            const filtros = JSON.parse(filtrosSalvos);
+            if (filtros.dataInicio) document.getElementById('listaDataInicio').value = filtros.dataInicio;
+            if (filtros.dataFim) document.getElementById('listaDataFim').value = filtros.dataFim;
+            if (filtros.consultaTexto) document.getElementById('buscaAtividades').value = filtros.consultaTexto;
+            
+            // Selecionar equipes, categorias e produtos
+            if (filtros.equipe) {
+                Array.from(selEquipes.options).forEach(opt => {
+                    opt.selected = filtros.equipe.includes(opt.value);
+                });
+            }
+            if (filtros.categoria) {
+                Array.from(selCategorias.options).forEach(opt => {
+                    opt.selected = filtros.categoria.includes(opt.value);
+                });
+            }
+            if (filtros.produto) {
+                Array.from(selProdutos.options).forEach(opt => {
+                    opt.selected = filtros.produto.includes(opt.value);
+                });
+            }
+            
+            // Restaurar dados da lista
+            atividadesListaGlobal = JSON.parse(dadosSalvos);
+            
+            // Renderizar lista imediatamente (sem fazer nova requisição)
+            const resultadoInfo = document.getElementById('resultadoInfo');
+            if (resultadoInfo) {
+                resultadoInfo.textContent = `${atividadesListaGlobal.length} atividade(s) encontrada(s)`;
+            }
+            renderAtividadesListaGlobal();
+            
+            console.log('✅ Lista restaurada com sucesso!');
+            return; // Não executar o resto do código
+        }
+        
         // Verificar se há filtros do dashboard para aplicar automaticamente
         const filtrosDoDashboard = localStorage.getItem('filtrosAtividadesCadastradas');
         if (filtrosDoDashboard) {
@@ -3283,6 +3405,7 @@ function deselectAll(selectId){
 // ============================================================
 
 async function salvarEquipe() {
+    refreshToken(); // Atualizar token do localStorage
     const equipe = document.getElementById('equipe').value;
     const interno_prf = document.getElementById('interno_prf').checked;
     const id_edit = document.getElementById('id_equipe_edit').value;
@@ -3314,6 +3437,9 @@ async function salvarEquipe() {
             cancelarEdicaoEquipe();
             await loadEquipes();
             carregarListaEquipes();
+        } else if (response.status === 401) {
+            alert('Sua sessão expirou. Por favor, faça login novamente.');
+            logout();
         } else {
             const error = await response.json();
             mensagem.innerHTML = `<div style="padding:12px;background:#f8d7da;color:#721c24;border:1px solid #f5c6cb;border-radius:4px;">❌ Erro: ${error.detail || 'Não foi possível salvar'}</div>`;
@@ -3324,6 +3450,7 @@ async function salvarEquipe() {
 }
 
 async function salvarCategoria() {
+    refreshToken(); // Atualizar token do localStorage
     const categoria_atividade = document.getElementById('categoria_atividade').value;
     const id_edit = document.getElementById('id_categoria_edit').value;
     
@@ -3354,6 +3481,9 @@ async function salvarCategoria() {
             cancelarEdicaoCategoria();
             await loadCategorias();
             carregarListaCategorias();
+        } else if (response.status === 401) {
+            alert('Sua sessão expirou. Por favor, faça login novamente.');
+            logout();
         } else {
             const error = await response.json();
             mensagem.innerHTML = `<div style="padding:12px;background:#f8d7da;color:#721c24;border:1px solid #f5c6cb;border-radius:4px;">❌ Erro: ${error.detail || 'Não foi possível salvar'}</div>`;
@@ -3364,6 +3494,7 @@ async function salvarCategoria() {
 }
 
 async function salvarProduto() {
+    refreshToken(); // Atualizar token do localStorage
     const id_categoria_atividade = parseInt(document.getElementById('id_categoria_atividade').value);
     const produto_atividade = document.getElementById('produto_atividade').value;
     const medida = document.getElementById('medida').value;
@@ -3397,6 +3528,9 @@ async function salvarProduto() {
             cancelarEdicaoProduto();
             await loadProdutos();
             carregarListaProdutos();
+        } else if (response.status === 401) {
+            alert('Sua sessão expirou. Por favor, faça login novamente.');
+            logout();
         } else {
             const error = await response.json();
             mensagem.innerHTML = `<div style="padding:12px;background:#f8d7da;color:#721c24;border:1px solid #f5c6cb;border-radius:4px;">❌ Erro: ${error.detail || 'Não foi possível salvar'}</div>`;
@@ -3407,6 +3541,7 @@ async function salvarProduto() {
 }
 
 async function salvarUsuario() {
+    refreshToken(); // Atualizar token do localStorage
     const email = document.getElementById('email').value;
     const nome = document.getElementById('nome').value;
     const nivel = document.getElementById('nivel').value;
@@ -3438,6 +3573,9 @@ async function salvarUsuario() {
             mensagem.innerHTML = `<div style="padding:12px;background:#d4edda;color:#155724;border:1px solid #c3e6cb;border-radius:4px;">✅ Usuário ${isEdit ? 'atualizado' : 'cadastrado'} com sucesso!</div>`;
             cancelarEdicaoUsuario();
             carregarListaUsuarios();
+        } else if (response.status === 401) {
+            alert('Sua sessão expirou. Por favor, faça login novamente.');
+            logout();
         } else {
             const error = await response.json();
             mensagem.innerHTML = `<div style="padding:12px;background:#f8d7da;color:#721c24;border:1px solid #f5c6cb;border-radius:4px;">❌ Erro: ${error.detail || 'Não foi possível salvar'}</div>`;

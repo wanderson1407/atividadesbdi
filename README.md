@@ -35,38 +35,54 @@ DEV_AUTH=false             # Autenticação Google OAuth
 
 ---
 
-## 📌 ESTADO ATUAL DO PROJETO - MARCA 7 (12/01/2026)
+## 📌 ESTADO ATUAL DO PROJETO - MARCA 8 (13/01/2026)
 
-### Status: 🚀 **EM PRODUÇÃO COM OAUTH2 REAL**
+### Status: 🚀 **PRODUÇÃO COM MELHORIAS CRÍTICAS**
 
-O projeto está **100% FUNCIONAL EM PRODUÇÃO** no Google Cloud Run com autenticação Google OAuth2 real, cache otimizado e validações robustas.
+O projeto está **100% FUNCIONAL EM PRODUÇÃO** no Google Cloud Run com melhorias críticas de estabilidade e UX.
 
 ### 🌐 URL de Produção
 **https://atividades-bdi-serra-945799576026.us-central1.run.app**
 
 ### Versão Atual
-- **Marcação:** 7
-- **Data:** 12 de janeiro de 2026
-- **Descrição:** Deploy produção com OAuth2 real + correções de cache navegador + validação Firestore
+- **Marcação:** 8.0.1
+- **Data:** 13 de janeiro de 2026
+- **Descrição:** Correção de 5 problemas críticos + melhorias de UX
 - **Ambiente:** Google Cloud Run (Region: us-central1)
-- **Revisão Ativa:** 00029-jws
+- **Revisão Ativa:** 00044-yah (tag: marca8)
 - **Custo:** US$ 0/mês (dentro do free tier)
 
-### 🎯 Principais Conquistas da MARCA 7
-- ✅ **Google OAuth2 Real:** Autenticação com contas Google + validação de usuários autorizados no Firestore
-- ✅ **Deploy Cloud Run:** Sistema completo rodando em produção com HTTPS
-- ✅ **Cache HTTP:** NoCacheMiddleware força navegador a buscar versão mais recente sempre
-- ✅ **Validação Firestore:** Sistema ignora documentos malformados (sem campos obrigatórios)
-- ✅ **localStorage Completo:** Objeto user salvo após login com email, nome e nível
-- ✅ **Gerenciamento Revisões:** Controle manual de tráfego entre revisões Cloud Run
-- ✅ **Logs de Debug:** Sistema completo de logging para troubleshooting em produção
-- ✅ **Custo Zero:** Todas as operações dentro do free tier (Cloud Build + Cloud Run + Firestore)
+### 🎯 Principais Conquistas da MARCA 8
+- ✅ **Sessão Estendida:** JWT de 8 horas (480 min) vs 30 min anteriores - eliminou desconexões frequentes
+- ✅ **Interceptor 401:** Refresh automático de token + redirecionamento inteligente ao login
+- ✅ **Logout Robusto:** window.location.replace() + try/catch previne falhas de navegação
+- ✅ **IDs Opcionais:** Pydantic com Optional[int] permite auto-incremento no backend
+- ✅ **Edição por ID:** .find() substituiu acesso por índice - corrigiu bug de item errado
+- ✅ **Fluxo Inteligente:** Sistema detecta contexto (inserção vs edição) e navega adequadamente
+- ✅ **Preservação de Estado:** Filtros e listas salvas em localStorage durante navegação
 
-**📖 Documentação completa:** [MARCA_7.md](MARCA_7.md)
+### 🐛 Problemas Corrigidos
+1. **Fluxo Confuso de Edição:** Após salvar, sistema voltava para dashboard mesmo ao editar da lista
+   - **Solução:** Flag `editingFromList` diferencia inserção (fica na tela) de edição (volta pra lista)
+   
+2. **Timeout Frequente:** Sessão expirava 8+ vezes por tarde (30 minutos)
+   - **Solução:** JWT estendido para 8 horas + interceptor 401 em todas as requisições
+   
+3. **Logout Quebrado:** Botão sair não funcionava consistentemente
+   - **Solução:** window.location.replace() + try/catch + limpeza de storage/cache
+   
+4. **Erro 401 ao Criar:** "Token inválido ou expirado" ao salvar equipe/categoria/produto
+   - **Solução:** Campos ID tornados Optional[int] no Pydantic + refresh de token antes de salvar
+   
+5. **Item Errado na Edição:** Clique em editar carregava item diferente
+   - **Solução:** Substituído `array[id]` por `array.find(item => item.id == id)`
+
+**📖 Documentação completa:** [MARCA_8.md](MARCA_8.md)
 
 ---
 
 ### Marcações Anteriores
+- **MARCA 7** (12/01/2026): OAuth2 real + cache HTTP + validação Firestore → [MARCA_7.md](MARCA_7.md)
 - **MARCA 6** (08/01/2026): Sistema de cache (30 dias) + validações + correção filtros → [MARCA_6.md](MARCA_6.md)
 - **MARCA 5** (08/01/2026): Dashboard reorganizado + tabelas transpostas + UX aprimorado → [MARCA_5.md](MARCA_5.md)
 - **MARCA 4** (08/01/2026): Dashboard analítico completo com 6 visualizações → [MARCA_4.md](MARCA_4.md)

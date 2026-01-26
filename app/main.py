@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
 load_dotenv()  # Carrega variáveis do arquivo .env
 
+# MARCA 8.0.1 - Deploy 13/01/2026 - 15:30
 import os
 from fastapi import FastAPI, HTTPException, Depends, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,7 +14,7 @@ from typing import List, Optional
 from pydantic import BaseModel
 
 # Esta variável TEM que se chamar 'app'
-app = FastAPI(title="Atividades BDI Serra API")
+app = FastAPI(title="Atividades BDI Serra API - Versão 8.0.1")
 
 # Middleware para DESABILITAR CACHE em todos os responses
 class NoCacheMiddleware(BaseHTTPMiddleware):
