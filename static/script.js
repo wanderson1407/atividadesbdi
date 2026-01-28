@@ -7,6 +7,31 @@ let produtosData = []; // Array completo com todos os dados dos produtos
 let equipeInternalMap = {}; // id_equipe -> interno_prf boolean
 let todasAtividades = []; // Todas as atividades sem filtro (para gráficos anuais)
 
+// Ordenação personalizada das equipes
+const prioridadesEquipes = ['BDI Serra', 'GPT Serra', 'UOP Serra', 'COE / NOE', 'Polícia Civil'];
+const normalizarNomeEquipe = (nome) => (nome || '')
+    .toString()
+    .trim()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toUpperCase();
+const prioridadesEquipesNormalizadas = prioridadesEquipes.map(normalizarNomeEquipe);
+
+function ordenarEquipesComPrioridade(equipes) {
+    const prioritarias = [];
+    const outras = [];
+    equipes.forEach((equipe) => {
+        const idx = prioridadesEquipesNormalizadas.indexOf(normalizarNomeEquipe(equipe.equipe));
+        if (idx !== -1) {
+            prioritarias[idx] = equipe;
+        } else {
+            outras.push(equipe);
+        }
+    });
+    outras.sort((a, b) => a.equipe.localeCompare(b.equipe, 'pt-BR', { sensitivity: 'base' }));
+    return [...prioritarias.filter(Boolean), ...outras];
+}
+
 // Função para garantir que o token está atualizado
 function refreshToken() {
     token = localStorage.getItem('token');
@@ -127,7 +152,9 @@ async function loadEquipes() {
         const select = document.getElementById('equipeSelect');
         if (select) {
             select.innerHTML = '';
-            equipes.forEach(equipe => {
+            // Ordenação personalizada
+            const equipesOrdenadas = ordenarEquipesComPrioridade(equipes);
+            equipesOrdenadas.forEach(equipe => {
                 const option = document.createElement('option');
                 option.value = equipe.id_equipe;
                 option.text = equipe.equipe;
@@ -151,7 +178,11 @@ async function loadCategorias() {
         const select = document.getElementById('categoriaSelect');
         if (select) {
             select.innerHTML = '';
-            categorias.forEach(categoria => {
+            // Ordenar alfabeticamente
+            const categoriasOrdenadas = [...categorias].sort((a, b) => 
+                a.categoria_atividade.localeCompare(b.categoria_atividade, 'pt-BR', { sensitivity: 'base' })
+            );
+            categoriasOrdenadas.forEach(categoria => {
                 const option = document.createElement('option');
                 option.value = categoria.id_categoria_atividade;
                 option.text = categoria.categoria_atividade;
@@ -176,7 +207,11 @@ async function loadProdutos() {
         const select = document.getElementById('produtoSelect');
         if (select) {
             select.innerHTML = '';
-            produtos.forEach(produto => {
+            // Ordenar alfabeticamente
+            const produtosOrdenados = [...produtos].sort((a, b) => 
+                a.produto_atividade.localeCompare(b.produto_atividade, 'pt-BR', { sensitivity: 'base' })
+            );
+            produtosOrdenados.forEach(produto => {
                 const option = document.createElement('option');
                 option.value = produto.id_produto_atividade;
                 option.text = produto.produto_atividade;
@@ -2313,8 +2348,15 @@ function showInserirAtividade(){
     const selEquipes = document.getElementById('novaEquipes');
     const buscaEquipe = document.getElementById('buscaEquipe');
     
-    // Equipes prioritárias (sempre no topo, nesta ordem)
-    const prioridades = ['GPT Serra', 'UOP Serra', 'BDI Serra', 'Delegacia de Serra'];
+    // Equipes prioritárias (sempre no topo, nesta ordem exata)
+    const prioridades = ['BDI Serra', 'GPT Serra', 'UOP Serra', 'COE / NOE', 'Polícia Civil'];
+    const normalizarNomeEquipe = (nome) => (nome || '')
+        .toString()
+        .trim()
+        .normalize('NFD')
+        .replace(/\p{Diacritic}/gu, '')
+        .toUpperCase();
+    const prioridadesNormalizadas = prioridades.map(normalizarNomeEquipe);
     
     // Separar equipes prioritárias das demais
     const todasEntries = Object.entries(equipeMap);
@@ -2322,7 +2364,7 @@ function showInserirAtividade(){
     const equipeOutras = [];
     
     todasEntries.forEach(([id, nome]) => {
-        const idx = prioridades.indexOf(nome);
+        const idx = prioridadesNormalizadas.indexOf(normalizarNomeEquipe(nome));
         if (idx !== -1) {
             equipePrioritarias[idx] = [id, nome];
         } else {
@@ -2331,7 +2373,7 @@ function showInserirAtividade(){
     });
     
     // Ordenar as outras alfabeticamente
-    equipeOutras.sort((a, b) => a[1].localeCompare(b[1], 'pt-BR'));
+    equipeOutras.sort((a, b) => a[1].localeCompare(b[1], 'pt-BR', { sensitivity: 'base' }));
     
     // Juntar: prioritárias primeiro (filtrar undefined), depois outras
     const todasEquipes = [...equipePrioritarias.filter(e => e), ...equipeOutras];
@@ -2774,17 +2816,29 @@ function showAtividadesCadastradas(){
     const selCategorias = document.getElementById('listaCategoriaSelect');
     const selProdutos = document.getElementById('listaProdutoSelect');
     
-    Object.entries(equipeMap).forEach(([id, nome]) => {
+    // Ordenação personalizada de equipes
+    const equipesOrdenadas = ordenarEquipesComPrioridade(
+        Object.entries(equipeMap).map(([id, nome]) => ({ id_equipe: id, equipe: nome }))
+    );
+    equipesOrdenadas.forEach(({ id_equipe, equipe }) => {
         const opt = document.createElement('option');
-        opt.value = id; opt.text = nome;
+        opt.value = id_equipe; opt.text = equipe;
         selEquipes.appendChild(opt);
     });
-    Object.entries(categoriaMap).forEach(([id, nome]) => {
+    // Ordenar categorias alfabeticamente
+    const categoriasOrdenadas = Object.entries(categoriaMap).sort((a, b) => 
+        a[1].localeCompare(b[1], 'pt-BR', { sensitivity: 'base' })
+    );
+    categoriasOrdenadas.forEach(([id, nome]) => {
         const opt = document.createElement('option');
         opt.value = id; opt.text = nome;
         selCategorias.appendChild(opt);
     });
-    Object.entries(produtoMap).forEach(([id, nome]) => {
+    // Ordenar produtos alfabeticamente
+    const produtosOrdenados = Object.entries(produtoMap).sort((a, b) => 
+        a[1].localeCompare(b[1], 'pt-BR', { sensitivity: 'base' })
+    );
+    produtosOrdenados.forEach(([id, nome]) => {
         const opt = document.createElement('option');
         opt.value = id; opt.text = nome;
         selProdutos.appendChild(opt);
@@ -2800,20 +2854,30 @@ function showAtividadesCadastradas(){
                     fetchData('/produtos')
                 ]);
                 
-                equipes.forEach(e => {
+                // Ordenação personalizada de equipes
+                const equipesOrdenadas = ordenarEquipesComPrioridade(equipes);
+                equipesOrdenadas.forEach(e => {
                     equipeMap[e.id_equipe] = e.equipe;
                     const opt = document.createElement('option');
                     opt.value = e.id_equipe; opt.text = e.equipe;
                     selEquipes.appendChild(opt);
                 });
-                categorias.forEach(c => {
+                // Ordenar e popular categorias
+                const categoriasOrdenadas = [...categorias].sort((a, b) => 
+                    a.categoria_atividade.localeCompare(b.categoria_atividade, 'pt-BR', { sensitivity: 'base' })
+                );
+                categoriasOrdenadas.forEach(c => {
                     categoriaMap[c.id_categoria_atividade] = c.categoria_atividade;
                     const opt = document.createElement('option');
                     opt.value = c.id_categoria_atividade; opt.text = c.categoria_atividade;
                     selCategorias.appendChild(opt);
                 });
+                // Ordenar e popular produtos
                 produtosData = produtos;
-                produtos.forEach(p => {
+                const produtosOrdenados = [...produtos].sort((a, b) => 
+                    a.produto_atividade.localeCompare(b.produto_atividade, 'pt-BR', { sensitivity: 'base' })
+                );
+                produtosOrdenados.forEach(p => {
                     produtoMap[p.id_produto_atividade] = p.produto_atividade;
                     const opt = document.createElement('option');
                     opt.value = p.id_produto_atividade; opt.text = p.produto_atividade;

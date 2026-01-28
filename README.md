@@ -35,53 +35,40 @@ DEV_AUTH=false             # Autenticação Google OAuth
 
 ---
 
-## 📌 ESTADO ATUAL DO PROJETO - MARCA 8 (13/01/2026)
+## 📌 ESTADO ATUAL DO PROJETO - MARCA 9 (28/01/2026)
 
-### Status: 🚀 **PRODUÇÃO COM MELHORIAS CRÍTICAS**
+### Status: 🚀 **PRODUÇÃO COM AJUSTES DE UX**
 
-O projeto está **100% FUNCIONAL EM PRODUÇÃO** no Google Cloud Run com melhorias críticas de estabilidade e UX.
+O projeto está **100% FUNCIONAL EM PRODUÇÃO** no Google Cloud Run com melhorias de usabilidade nos filtros e cadastro.
 
 ### 🌐 URL de Produção
 **https://atividades-bdi-serra-945799576026.us-central1.run.app**
 
 ### Versão Atual
-- **Marcação:** 8.0.1
-- **Data:** 13 de janeiro de 2026
-- **Descrição:** Correção de 5 problemas críticos + melhorias de UX
+- **Marcação:** 9.0.0
+- **Data:** 28 de janeiro de 2026
+- **Descrição:** Ordenação personalizada das equipes nos filtros e no cadastro
 - **Ambiente:** Google Cloud Run (Region: us-central1)
-- **Revisão Ativa:** 00044-yah (tag: marca8)
+- **Revisão Ativa:** atividades-bdi-serra-marca9-2 (tag: marca9)
 - **Custo:** US$ 0/mês (dentro do free tier)
 
-### 🎯 Principais Conquistas da MARCA 8
-- ✅ **Sessão Estendida:** JWT de 8 horas (480 min) vs 30 min anteriores - eliminou desconexões frequentes
-- ✅ **Interceptor 401:** Refresh automático de token + redirecionamento inteligente ao login
-- ✅ **Logout Robusto:** window.location.replace() + try/catch previne falhas de navegação
-- ✅ **IDs Opcionais:** Pydantic com Optional[int] permite auto-incremento no backend
-- ✅ **Edição por ID:** .find() substituiu acesso por índice - corrigiu bug de item errado
-- ✅ **Fluxo Inteligente:** Sistema detecta contexto (inserção vs edição) e navega adequadamente
-- ✅ **Preservação de Estado:** Filtros e listas salvas em localStorage durante navegação
+### 🎯 Principais Conquistas da MARCA 9
+- ✅ **Filtros mais intuitivos:** Equipes com prioridades no topo e restante em ordem alfabética
+- ✅ **Cadastro consistente:** Campo Equipes com a ordem solicitada (topo fixo + alfabético)
+- ✅ **Normalização confiável:** Casamento de prioridades ignorando caixa/acentos
 
 ### 🐛 Problemas Corrigidos
-1. **Fluxo Confuso de Edição:** Após salvar, sistema voltava para dashboard mesmo ao editar da lista
-   - **Solução:** Flag `editingFromList` diferencia inserção (fica na tela) de edição (volta pra lista)
-   
-2. **Timeout Frequente:** Sessão expirava 8+ vezes por tarde (30 minutos)
-   - **Solução:** JWT estendido para 8 horas + interceptor 401 em todas as requisições
-   
-3. **Logout Quebrado:** Botão sair não funcionava consistentemente
-   - **Solução:** window.location.replace() + try/catch + limpeza de storage/cache
-   
-4. **Erro 401 ao Criar:** "Token inválido ou expirado" ao salvar equipe/categoria/produto
-   - **Solução:** Campos ID tornados Optional[int] no Pydantic + refresh de token antes de salvar
-   
-5. **Item Errado na Edição:** Clique em editar carregava item diferente
-   - **Solução:** Substituído `array[id]` por `array.find(item => item.id == id)`
+1. **Ordem confusa nas equipes do cadastro:** Lista não respeitava a ordem definida
+  - **Solução:** Normalização de nomes + ordenação personalizada
+2. **Dificuldade em localizar equipes nos filtros:** Ordem não priorizava equipes mais acionadas
+  - **Solução:** Prioridades no topo nos filtros do Dashboard e Atividades
 
-**📖 Documentação completa:** [MARCA_8.md](MARCA_8.md)
+**📖 Documentação completa:** [MARCA_9.md](MARCA_9.md)
 
 ---
 
 ### Marcações Anteriores
+- **MARCA 8** (13/01/2026): Correções críticas de estabilidade e UX → [MARCA_8.md](MARCA_8.md)
 - **MARCA 7** (12/01/2026): OAuth2 real + cache HTTP + validação Firestore → [MARCA_7.md](MARCA_7.md)
 - **MARCA 6** (08/01/2026): Sistema de cache (30 dias) + validações + correção filtros → [MARCA_6.md](MARCA_6.md)
 - **MARCA 5** (08/01/2026): Dashboard reorganizado + tabelas transpostas + UX aprimorado → [MARCA_5.md](MARCA_5.md)
@@ -614,7 +601,8 @@ atividades-bdi-serra/
 ├── mock_firestore_atividades-bdi.json  # Banco de dados mock
 ├── import_csv_data.py       # Script para importar CSVs
 ├── MARCA_1.md               # Primeira marcação estável
-├── MARCA_2.md               # Segunda marcação estável (atual)
+├── MARCA_2.md               # Segunda marcação estável
+├── MARCA_9.md               # Última marcação (atual)
 └── README.md                # Este arquivo
 ```
 
