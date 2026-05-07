@@ -4,8 +4,15 @@ let equipeMap = {};
 let categoriaMap = {};
 let produtoMap = {};
 let produtosData = []; // Array completo com todos os dados dos produtos
+let equipesData = [];  // Array completo com objetos Equipe (inclui id_equipe_pai)
 let equipeInternalMap = {}; // id_equipe -> interno_prf boolean
+let tipificacoesData = []; // Array completo de tipificações penais
 let todasAtividades = []; // Todas as atividades sem filtro (para gráficos anuais)
+
+// Instâncias globais dos TreeMultiSelect do dashboard
+let tmsDashEquipe = null;
+let tmsDashCategoria = null;
+let tmsDashProduto = null;
 
 // Ordenação personalizada das equipes
 const prioridadesEquipes = ['BDI Serra', 'GPT Serra', 'UOP Serra', 'COE / NOE', 'Polícia Civil'];
@@ -30,6 +37,24 @@ function ordenarEquipesComPrioridade(equipes) {
     });
     outras.sort((a, b) => a.equipe.localeCompare(b.equipe, 'pt-BR', { sensitivity: 'base' }));
     return [...prioritarias.filter(Boolean), ...outras];
+}
+
+/**
+ * Retorna o rótulo completo de uma equipe com a cadeia hierárquica.
+ * Ex: getEquipeChainLabel(3) → "PRF - BDI SERRA"
+ */
+function getEquipeChainLabel(id) {
+    const chain = [];
+    let currentId = Number(id);
+    const visited = new Set();
+    while (currentId && !visited.has(currentId)) {
+        visited.add(currentId);
+        const eq = equipesData.find(e => e.id_equipe === currentId);
+        if (!eq) break;
+        chain.unshift(eq.equipe);
+        currentId = eq.id_equipe_pai || null;
+    }
+    return chain.join(' - ');
 }
 
 // Função para garantir que o token está atualizado
@@ -144,21 +169,38 @@ async function loadEquipes() {
         const equipes = await fetchData('/equipes');
         equipeMap = {};
         equipeInternalMap = {};
+        equipesData = equipes;
         equipes.forEach(equipe => {
             equipeMap[equipe.id_equipe] = equipe.equipe;
             equipeInternalMap[equipe.id_equipe] = !!equipe.interno_prf;
         });
-        // Só popula o select se existir na página
+
+        // Montar TreeMultiSelect no dashboard (se o container existir)
+        const containerEquipe = document.getElementById('tmsEquipe');
+        if (containerEquipe) {
+            const tmsItems = equipes.map(e => ({
+                id: e.id_equipe,
+                label: e.equipe,
+                parentId: e.id_equipe_pai || null
+            }));
+            tmsDashEquipe = new TreeMultiSelect(containerEquipe, {
+                label: 'Equipes',
+                items: tmsItems,
+                selected: equipes.map(e => e.id_equipe),
+                placeholder: 'Buscar equipe...'
+            });
+        }
+
+        // Fallback: select antigo (caso exista em outra tela)
         const select = document.getElementById('equipeSelect');
         if (select) {
             select.innerHTML = '';
-            // Ordenação personalizada
             const equipesOrdenadas = ordenarEquipesComPrioridade(equipes);
             equipesOrdenadas.forEach(equipe => {
                 const option = document.createElement('option');
                 option.value = equipe.id_equipe;
                 option.text = equipe.equipe;
-                option.selected = true; // Selecionar todas por padrão
+                option.selected = true;
                 select.appendChild(option);
             });
         }
@@ -174,19 +216,33 @@ async function loadCategorias() {
         categorias.forEach(categoria => {
             categoriaMap[categoria.id_categoria_atividade] = categoria.categoria_atividade;
         });
-        // Só popula o select se existir na página
+
+        // Montar TreeMultiSelect no dashboard
+        const containerCategoria = document.getElementById('tmsCategoria');
+        if (containerCategoria) {
+            const tmsItems = [...categorias]
+                .sort((a, b) => a.categoria_atividade.localeCompare(b.categoria_atividade, 'pt-BR', { sensitivity: 'base' }))
+                .map(c => ({ id: c.id_categoria_atividade, label: c.categoria_atividade, parentId: null }));
+            tmsDashCategoria = new TreeMultiSelect(containerCategoria, {
+                label: 'Categorias',
+                items: tmsItems,
+                selected: categorias.map(c => c.id_categoria_atividade),
+                placeholder: 'Buscar categoria...'
+            });
+        }
+
+        // Fallback: select antigo
         const select = document.getElementById('categoriaSelect');
         if (select) {
             select.innerHTML = '';
-            // Ordenar alfabeticamente
-            const categoriasOrdenadas = [...categorias].sort((a, b) => 
+            const categoriasOrdenadas = [...categorias].sort((a, b) =>
                 a.categoria_atividade.localeCompare(b.categoria_atividade, 'pt-BR', { sensitivity: 'base' })
             );
             categoriasOrdenadas.forEach(categoria => {
                 const option = document.createElement('option');
                 option.value = categoria.id_categoria_atividade;
                 option.text = categoria.categoria_atividade;
-                option.selected = true; // Selecionar todas por padrão
+                option.selected = true;
                 select.appendChild(option);
             });
         }
@@ -199,28 +255,51 @@ async function loadProdutos() {
     try {
         const produtos = await fetchData('/produtos');
         produtoMap = {};
-        produtosData = produtos; // Armazena dados completos
+        produtosData = produtos;
         produtos.forEach(produto => {
             produtoMap[produto.id_produto_atividade] = produto.produto_atividade;
         });
-        // Só popula o select se existir na página
+
+        // Montar TreeMultiSelect no dashboard
+        const containerProduto = document.getElementById('tmsProduto');
+        if (containerProduto) {
+            const tmsItems = [...produtos]
+                .sort((a, b) => a.produto_atividade.localeCompare(b.produto_atividade, 'pt-BR', { sensitivity: 'base' }))
+                .map(p => ({ id: p.id_produto_atividade, label: p.produto_atividade, parentId: null }));
+            tmsDashProduto = new TreeMultiSelect(containerProduto, {
+                label: 'Produtos',
+                items: tmsItems,
+                selected: produtos.map(p => p.id_produto_atividade),
+                placeholder: 'Buscar produto...'
+            });
+        }
+
+        // Fallback: select antigo
         const select = document.getElementById('produtoSelect');
         if (select) {
             select.innerHTML = '';
-            // Ordenar alfabeticamente
-            const produtosOrdenados = [...produtos].sort((a, b) => 
+            const produtosOrdenados = [...produtos].sort((a, b) =>
                 a.produto_atividade.localeCompare(b.produto_atividade, 'pt-BR', { sensitivity: 'base' })
             );
             produtosOrdenados.forEach(produto => {
                 const option = document.createElement('option');
                 option.value = produto.id_produto_atividade;
                 option.text = produto.produto_atividade;
-                option.selected = true; // Selecionar todos por padrão
+                option.selected = true;
                 select.appendChild(option);
             });
         }
     } catch (error) {
         console.error('Erro ao carregar produtos:', error);
+    }
+}
+
+async function loadTipificacoes() {
+    try {
+        const data = await fetchData('/tipificacoes');
+        tipificacoesData = data;
+    } catch (error) {
+        console.error('Erro ao carregar tipificações:', error);
     }
 }
 
@@ -483,6 +562,7 @@ async function loadAtividades(filtros = {}, forceReload = false) {
                 const atividades = filterActivities(atividadesRaw, filtros);
                 
                 renderCharts(atividades);
+                renderAcoesIntegradas(atividades);
                 updateIndicators(atividades);
                 renderQuadroQTCs();
                 renderQuadroResultados();
@@ -536,6 +616,7 @@ async function loadAtividades(filtros = {}, forceReload = false) {
         }
         
         renderCharts(atividades);
+        renderAcoesIntegradas(atividades);
         updateIndicators(atividades);
         renderQuadroQTCs();
         renderQuadroResultados();
@@ -726,7 +807,212 @@ function updateIndicators(atividades){
 }
 
 // Variáveis globais para instâncias dos gráficos
-let chartEquipesInstance, chartPessoasInstance, chartVeiculosInstance, chartParticipacaoInstance, chartDemandasInstance, chartDocumentosInstance;
+let chartEquipesInstance, chartPessoasInstance, chartVeiculosInstance, chartParticipacaoInstance, chartDemandasInstance, chartDocumentosInstance, chartTipificacoesInstance, chartTipPenaisInstance;
+
+// ── Ações Integradas ────────────────────────────────────────────────────
+/**
+ * Determina se uma atividade é "integrada":
+ * possui ao menos uma equipe interna PRF E ao menos uma externa.
+ */
+function isAcaoIntegrada(atividade) {
+    const ids = (atividade.equipes || []).map(Number);
+    const temInterna = ids.some(id => equipeInternalMap[id]);
+    const temExterna = ids.some(id => !equipeInternalMap[id]);
+    return temInterna && temExterna;
+}
+
+/**
+ * Renderiza a tabela e o gráfico de Ações Integradas no dashboard.
+ * Obedece ao filtro de pesquisa (recebe o array já filtrado).
+ */
+function renderAcoesIntegradas(atividadesFiltradas) {
+    const integradas = atividadesFiltradas.filter(isAcaoIntegrada);
+
+    // ── Cabeçalho com total ───────────────────────────────────────────────
+    const totalEl = document.getElementById('totalAcoesIntegradas');
+    if (totalEl) totalEl.textContent = `Total: ${integradas.length} ação(ões) integrada(s) no período`;
+
+    // ── Tabela ────────────────────────────────────────────────────────────
+    const tbody = document.getElementById('tabelaAcoesIntegradas');
+    if (tbody) {
+        if (integradas.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="padding:12px;color:#999;text-align:center;">Nenhuma ação integrada no período</td></tr>';
+        } else {
+            // Ordena por data desc
+            const sorted = [...integradas].sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+            tbody.innerHTML = sorted.map(at => {
+                const equipes = (at.equipes || []).map(id => equipeMap[id] || id).join(', ');
+                // Expande produtos em linhas (rowspan na primeira)
+                const prods = at.produtos || [];
+                if (prods.length === 0) {
+                    return `<tr>
+                        <td style="padding:5px 8px;border-bottom:1px solid #eee;white-space:nowrap;">${at.data || ''}</td>
+                        <td style="padding:5px 8px;border-bottom:1px solid #eee;">${equipes}</td>
+                        <td style="padding:5px 8px;border-bottom:1px solid #eee;" colspan="3">—</td>
+                    </tr>`;
+                }
+                return prods.map((prod, idx) => {
+                    const nomeProd = produtoMap[prod.id_produto] || prod.id_produto;
+                    const qtd = prod.quantidade != null ? prod.quantidade : '—';
+                    const tips = (prod.tipificacoes || []).map(tid => {
+                        const t = tipificacoesData.find(x => x.id_tipificacao == tid);
+                        return t ? `Art.${t.artigo}${t.paragrafo && t.paragrafo !== '-' ? ' ' + t.paragrafo : ''} – ${t.descricao}` : tid;
+                    }).join('; ') || '—';
+                    if (idx === 0) {
+                        return `<tr>
+                            <td style="padding:5px 8px;border-bottom:1px solid #eee;white-space:nowrap;" rowspan="${prods.length}">${at.data || ''}</td>
+                            <td style="padding:5px 8px;border-bottom:1px solid #eee;" rowspan="${prods.length}">${equipes}</td>
+                            <td style="padding:5px 8px;border-bottom:1px solid #eee;">${nomeProd}</td>
+                            <td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;">${qtd}</td>
+                            <td style="padding:5px 8px;border-bottom:1px solid #eee;font-size:0.78rem;">${tips}</td>
+                        </tr>`;
+                    }
+                    return `<tr>
+                        <td style="padding:5px 8px;border-bottom:1px solid #eee;">${nomeProd}</td>
+                        <td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;">${qtd}</td>
+                        <td style="padding:5px 8px;border-bottom:1px solid #eee;font-size:0.78rem;">${tips}</td>
+                    </tr>`;
+                }).join('');
+            }).join('');
+        }
+    }
+
+    // ── Gráfico de tipificações por equipe ───────────────────────────────────
+    const equipeCount = {};
+    integradas.forEach(at => {
+        (at.equipes || []).forEach(id => {
+            const label = getEquipeChainLabel(id) || equipeMap[id] || id;
+            equipeCount[label] = (equipeCount[label] || 0) + 1;
+        });
+    });
+
+    const entries = Object.entries(equipeCount).sort((a, b) => b[1] - a[1]);
+    const ctx = document.getElementById('chartTipificacoes');
+    if (ctx) {
+        if (chartTipificacoesInstance) chartTipificacoesInstance.destroy();
+        if (entries.length === 0) {
+            ctx.parentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:300px;color:#999;font-size:0.9rem;">Sem dados no período</div>';
+        } else {
+            chartTipificacoesInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: entries.map(e => e[0]),
+                    datasets: [{ label: 'Ocorrências', data: entries.map(e => e[1]),
+                        backgroundColor: '#005a9e', borderRadius: 4 }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false },
+                        tooltip: { backgroundColor: 'rgba(0,0,0,0.8)', padding: 10 }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { font: { size: 11 } }, title: { display: true, text: 'Qtd. Ocorrências', font: { size: 11 } } },
+                        x: { ticks: { font: { size: 10 }, maxRotation: 45, minRotation: 45 }, title: { display: true, text: 'Equipes', font: { size: 11 } } }
+                    }
+                }
+            });
+        }
+    }
+
+    // ── Gráfico de Tipos Penais (por atividade integrada) ────────────────────
+    const tipPenalCount = {};
+    integradas.forEach(at => {
+        const tipsNaAtividade = new Set();
+        (at.produtos || []).forEach(prod => {
+            (prod.tipificacoes || []).forEach(tid => {
+                tipsNaAtividade.add(tid);
+            });
+        });
+        tipsNaAtividade.forEach(tid => {
+            const t = tipificacoesData.find(x => x.id_tipificacao == tid);
+            let label;
+            if (t) {
+                const leiPart = t.lei && t.lei.trim() ? `${t.lei.trim()} - ` : '';
+                label = `${leiPart}Art.${t.artigo}`;
+                if (t.paragrafo && t.paragrafo !== '-') label += ` §${t.paragrafo}`;
+                if (t.inciso && t.inciso !== '-') label += ` inc.${t.inciso}`;
+            } else {
+                label = String(tid);
+            }
+            tipPenalCount[label] = (tipPenalCount[label] || 0) + 1;
+        });
+    });
+    const totalTipFiltradas = integradas.length;
+    const elTotalTip = document.getElementById('totalTipPenais');
+    if (elTotalTip) elTotalTip.textContent = `Total de atividades integradas filtradas: ${totalTipFiltradas}`;
+    const tipEntries = Object.entries(tipPenalCount).sort((a, b) => b[1] - a[1]);
+    const ctxTip = document.getElementById('chartTipPenais');
+    if (ctxTip) {
+        if (chartTipPenaisInstance) chartTipPenaisInstance.destroy();
+        if (tipEntries.length === 0) {
+            ctxTip.parentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:260px;color:#999;font-size:0.9rem;">Sem tipificações penais no período</div>';
+        } else {
+            const pctData = tipEntries.map(e =>
+                totalTipFiltradas > 0 ? parseFloat((e[1] / totalTipFiltradas * 100).toFixed(1)) : 0
+            );
+            const pctLabels = pctData.map(v => v.toFixed(1) + '%');
+            const percentPlugin = {
+                id: 'percentAboveBars',
+                afterDatasetsDraw(chart) {
+                    const { ctx: c } = chart;
+                    chart.getDatasetMeta(0).data.forEach((bar, i) => {
+                        const lbl = pctLabels[i];
+                        c.save();
+                        c.font = 'bold 10px sans-serif';
+                        c.fillStyle = '#333';
+                        c.textAlign = 'center';
+                        c.fillText(lbl, bar.x, bar.y - 4);
+                        c.restore();
+                    });
+                }
+            };
+            chartTipPenaisInstance = new Chart(ctxTip, {
+                type: 'bar',
+                plugins: [percentPlugin],
+                data: {
+                    labels: tipEntries.map(e => e[0]),
+                    datasets: [{
+                        label: '% Atividades',
+                        data: pctData,
+                        backgroundColor: '#1b5e20',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    layout: { padding: { top: 20 } },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(0,0,0,0.8)', padding: 10,
+                            callbacks: {
+                                label: (ctx) => {
+                                    const idx = ctx.dataIndex;
+                                    return `${pctLabels[idx]} (${tipEntries[idx][1]} atividade(s))`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                font: { size: 11 },
+                                callback: v => v + '%'
+                            },
+                            title: { display: true, text: '% de Atividades', font: { size: 11 } }
+                        },
+                        x: {
+                            ticks: { font: { size: 9 }, maxRotation: 45, minRotation: 45 },
+                            title: { display: true, text: 'Tipificação Penal', font: { size: 11 } }
+                        }
+                    }
+                }
+            });
+        }
+    }
+}
 
 function renderCharts(atividades) {
     // Ocultar loader
@@ -736,7 +1022,7 @@ function renderCharts(atividades) {
     const equipeCounts = {};
     atividades.forEach(a => {
         a.equipes.forEach(id => {
-            const equipe = equipeMap[id] || id;
+            const equipe = getEquipeChainLabel(id) || equipeMap[id] || id;
             equipeCounts[equipe] = (equipeCounts[equipe] || 0) + 1;
         });
     });
@@ -1475,9 +1761,12 @@ function aplicarFiltros() {
     const filtros = {
         dataInicio: document.getElementById('dataInicio').value,
         dataFim: document.getElementById('dataFim').value,
-        equipe: Array.from(document.getElementById('equipeSelect').selectedOptions).map(o => o.value),
-        categoria: Array.from(document.getElementById('categoriaSelect').selectedOptions).map(o => o.value),
-        produto: Array.from(document.getElementById('produtoSelect').selectedOptions).map(o => o.value)
+        equipe: tmsDashEquipe ? tmsDashEquipe.getValue().map(String) :
+            Array.from(document.getElementById('equipeSelect')?.selectedOptions || []).map(o => o.value),
+        categoria: tmsDashCategoria ? tmsDashCategoria.getValue().map(String) :
+            Array.from(document.getElementById('categoriaSelect')?.selectedOptions || []).map(o => o.value),
+        produto: tmsDashProduto ? tmsDashProduto.getValue().map(String) :
+            Array.from(document.getElementById('produtoSelect')?.selectedOptions || []).map(o => o.value)
     };
     
     // Salvar filtros no localStorage para manter estado
@@ -1533,27 +1822,33 @@ async function exportarPDF() {
     y += 5;
     
     // Equipes selecionadas
-    const equipeSelect = document.getElementById('equipeSelect');
-    const equipesSelecionadas = Array.from(equipeSelect.selectedOptions).map(opt => opt.text);
-    const equipeTexto = equipesSelecionadas.length === 0 || equipesSelecionadas.length === equipeSelect.options.length 
+    const equipesSelecionadas = tmsDashEquipe
+        ? tmsDashEquipe.getValue().map(id => equipeMap[id] || id)
+        : Array.from(document.getElementById('equipeSelect')?.selectedOptions || []).map(opt => opt.text);
+    const totalEquipes = Object.keys(equipeMap).length;
+    const equipeTexto = equipesSelecionadas.length === 0 || equipesSelecionadas.length === totalEquipes
         ? 'Todas' 
         : equipesSelecionadas.join(', ');
     doc.text(`Equipes: ${equipeTexto}`, margin, y);
     y += 5;
     
     // Categorias selecionadas
-    const categoriaSelect = document.getElementById('categoriaSelect');
-    const categoriasSelecionadas = Array.from(categoriaSelect.selectedOptions).map(opt => opt.text);
-    const categoriaTexto = categoriasSelecionadas.length === 0 || categoriasSelecionadas.length === categoriaSelect.options.length 
+    const categoriasSelecionadas = tmsDashCategoria
+        ? tmsDashCategoria.getValue().map(id => categoriaMap[id] || id)
+        : Array.from(document.getElementById('categoriaSelect')?.selectedOptions || []).map(opt => opt.text);
+    const totalCategorias = Object.keys(categoriaMap).length;
+    const categoriaTexto = categoriasSelecionadas.length === 0 || categoriasSelecionadas.length === totalCategorias
         ? 'Todas' 
         : categoriasSelecionadas.join(', ');
     doc.text(`Categorias: ${categoriaTexto}`, margin, y);
     y += 5;
     
     // Produtos selecionados
-    const produtoSelect = document.getElementById('produtoSelect');
-    const produtosSelecionados = Array.from(produtoSelect.selectedOptions).map(opt => opt.text);
-    const produtoTexto = produtosSelecionados.length === 0 || produtosSelecionados.length === produtoSelect.options.length 
+    const produtosSelecionados = tmsDashProduto
+        ? tmsDashProduto.getValue().map(id => produtoMap[id] || id)
+        : Array.from(document.getElementById('produtoSelect')?.selectedOptions || []).map(opt => opt.text);
+    const totalProdutos = Object.keys(produtoMap).length;
+    const produtoTexto = produtosSelecionados.length === 0 || produtosSelecionados.length === totalProdutos
         ? 'Todos' 
         : produtosSelecionados.join(', ');
     doc.text(`Produtos: ${produtoTexto}`, margin, y);
@@ -2140,6 +2435,143 @@ async function exportarPDF() {
             });
         }
         
+        // ── PÁGINA FINAL: Relatório de Ações Integradas ──────────────────────
+        doc.addPage();
+        y = 15;
+
+        // Título da seção
+        doc.setFontSize(14);
+        doc.setFont(undefined, 'bold');
+        doc.setFillColor(245, 245, 245);
+        doc.rect(margin, y, contentWidth, 10, 'F');
+        doc.setTextColor(27, 20, 100);
+        doc.text('RELATÓRIO DE AÇÕES INTEGRADAS', pageWidth / 2, y + 7, { align: 'center' });
+        doc.setTextColor(0, 0, 0);
+        y += 14;
+
+        // Usar o array de atividades filtradas já calculado (atividadesParaRelatorio)
+        // Como exportarPDF não recebe atividades diretamente, relemos do estado atual via filterActivities
+        const atividadesParaPDF = (() => {
+            const dataInI = document.getElementById('dataInicio')?.value;
+            const dataFiI = document.getElementById('dataFim')?.value;
+            const eqIds = tmsDashEquipe ? tmsDashEquipe.getValue() : [];
+            const catIds = tmsDashCategoria ? tmsDashCategoria.getValue() : [];
+            const prodIds = tmsDashProduto ? tmsDashProduto.getValue() : [];
+            return filterActivities(todasAtividades, {
+                dataInicio: dataInI, dataFim: dataFiI,
+                equipe: eqIds, categoria: catIds, produto: prodIds
+            });
+        })();
+        const integradasPDF = atividadesParaPDF.filter(isAcaoIntegrada);
+
+        // Cabeçalho com total
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'normal');
+        doc.text(`Total de Atividades Integradas no período: ${integradasPDF.length}`, margin, y);
+        y += 8;
+
+        if (integradasPDF.length === 0) {
+            doc.setTextColor(150, 150, 150);
+            doc.text('Nenhuma ação integrada encontrada no período com o filtro aplicado.', margin, y);
+            doc.setTextColor(0, 0, 0);
+        } else {
+            // Tabela de ações integradas
+            const integradasRows = [];
+            const sortedInt = [...integradasPDF].sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+            sortedInt.forEach(at => {
+                const equipes = (at.equipes || []).map(id => equipeMap[id] || id).join(', ');
+                const prods = at.produtos || [];
+                if (prods.length === 0) {
+                    integradasRows.push([at.data || '', equipes, '—', '—', '—']);
+                } else {
+                    prods.forEach(prod => {
+                        const nomeProd = produtoMap[prod.id_produto] || prod.id_produto;
+                        const qtd = prod.quantidade != null ? String(prod.quantidade) : '—';
+                        const tips = (prod.tipificacoes || []).map(tid => {
+                            const t = tipificacoesData.find(x => x.id_tipificacao == tid);
+                            return t ? `Art.${t.artigo} – ${t.descricao}` : String(tid);
+                        }).join('; ') || '—';
+                        integradasRows.push([at.data || '', equipes, nomeProd, qtd, tips]);
+                    });
+                }
+            });
+
+            doc.autoTable({
+                startY: y,
+                head: [['Data', 'Equipes', 'Produto', 'Qtd', 'Tipificação Penal']],
+                body: integradasRows,
+                margin: { left: margin, right: margin },
+                styles: { overflow: 'linebreak', fontSize: 7, cellPadding: 2 },
+                columnStyles: {
+                    0: { cellWidth: 22 },
+                    1: { cellWidth: 40 },
+                    2: { cellWidth: 30 },
+                    3: { cellWidth: 10, halign: 'right' },
+                    4: { cellWidth: contentWidth - 22 - 40 - 30 - 10 }
+                },
+                headStyles: {
+                    fillColor: [27, 20, 100], textColor: [255, 255, 255],
+                    fontSize: 7, fontStyle: 'bold'
+                }
+            });
+            y = doc.lastAutoTable.finalY + 10;
+
+            // Gráfico de tipificações
+            const tipCountPDF = {};
+            integradasPDF.forEach(at => {
+                (at.produtos || []).forEach(prod => {
+                    (prod.tipificacoes || []).forEach(tid => {
+                        const t = tipificacoesData.find(x => x.id_tipificacao == tid);
+                        const label = t ? `Art.${t.artigo} – ${t.descricao}` : String(tid);
+                        tipCountPDF[label] = (tipCountPDF[label] || 0) + 1;
+                    });
+                });
+            });
+
+            const tipEntries = Object.entries(tipCountPDF).sort((a, b) => b[1] - a[1]);
+            if (tipEntries.length > 0 && document.getElementById('chartTipificacoes')) {
+                const chartCanvasTip = document.getElementById('chartTipificacoes');
+                const tipImg = chartCanvasTip.toDataURL('image/png', 1.0);
+                if (y + 80 > 280) { doc.addPage(); y = 15; }
+                doc.setFontSize(10);
+                doc.setFont(undefined, 'bold');
+                doc.text('Tipificações Penais por Ocorrência', margin, y);
+                y += 5;
+
+                // Tabela lateral + gráfico
+                doc.autoTable({
+                    startY: y,
+                    head: [['Tipificação', 'Qtd']],
+                    body: tipEntries.map(([l, v]) => [l, String(v)]),
+                    margin: { left: margin, right: margin + 110 },
+                    styles: { overflow: 'linebreak', fontSize: 7, cellPadding: 2 },
+                    columnStyles: {
+                        0: { cellWidth: 65 },
+                        1: { cellWidth: 15, halign: 'right' }
+                    },
+                    headStyles: { fillColor: [245, 245, 245], textColor: [0, 0, 0], fontSize: 7, fontStyle: 'bold' }
+                });
+                doc.addImage(tipImg, 'PNG', margin + 90, y - 3, 100, 60);
+                y = doc.lastAutoTable.finalY + 8;
+            }
+
+            // Gráfico Tipos Penais por % (chartTipPenais)
+            const canvasTipPenais = document.getElementById('chartTipPenais');
+            if (canvasTipPenais && chartTipPenaisInstance) {
+                if (y + 80 > 280) { doc.addPage(); y = 15; }
+                doc.setFontSize(10);
+                doc.setFont(undefined, 'bold');
+                doc.text('Tipos Penais — Ações Integradas (%)', margin, y);
+                y += 5;
+                const tipPenaisImg = canvasTipPenais.toDataURL('image/png', 1.0);
+                const imgW = contentWidth;
+                const imgH = Math.round(imgW * (canvasTipPenais.height / canvasTipPenais.width));
+                const safeH = Math.min(imgH, 80);
+                doc.addImage(tipPenaisImg, 'PNG', margin, y, imgW, safeH);
+                y += safeH + 6;
+            }
+        }
+
         doc.save('dashboard_atividades_bdi.pdf');
     } catch (error) {
         console.error('Erro ao gerar PDF:', error);
@@ -2161,6 +2593,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await loadEquipes();
         await loadCategorias();
         await loadProdutos();
+        await loadTipificacoes();
     } catch (e) {
         console.error('Erro ao carregar dados iniciais:', e);
     }
@@ -2314,9 +2747,7 @@ function showInserirAtividade(){
                 <label style="display:block;margin-top:12px;">Descrição<br><textarea id="novaDescricao" rows="3" style="width:100%;padding:8px;"></textarea></label>
                 
                 <div style="margin-top:16px;">
-                    <label>Equipes</label>
-                    <input type="text" id="buscaEquipe" placeholder="Buscar equipe..." style="width:100%;padding:8px;margin-bottom:8px;border:1px solid #ccc;border-radius:4px;">
-                    <select id="novaEquipes" multiple size="8" style="width:100%;"></select>
+                    <div id="tmsInserirEquipe"></div>
                 </div>
                 
                 <h3 style="margin-top:24px;margin-bottom:12px;color:var(--taura-blue);">Produtos da Atividade</h3>
@@ -2324,10 +2755,11 @@ function showInserirAtividade(){
                     <table style="width:100%;border-collapse:collapse;margin-bottom:12px;">
                         <thead>
                             <tr style="background:#e9ecef;color:#000;">
-                                <th style="padding:10px;border:1px solid var(--taura-border);width:35%;font-weight:600;">Produto</th>
+                                <th style="padding:10px;border:1px solid var(--taura-border);width:28%;font-weight:600;">Produto</th>
                                 <th style="padding:10px;border:1px solid var(--taura-border);width:15%;font-weight:600;">Quantidade</th>
                                 <th style="padding:10px;border:1px solid var(--taura-border);width:18%;font-weight:600;">Medida / Tipo</th>
                                 <th style="padding:10px;border:1px solid var(--taura-border);width:22%;font-weight:600;">Categoria</th>
+                                <th style="padding:10px;border:1px solid var(--taura-border);width:33%;font-weight:600;">Tipificação Penal</th>
                                 <th style="padding:10px;border:1px solid var(--taura-border);width:10%;font-weight:600;">Ações</th>
                             </tr>
                         </thead>
@@ -2344,66 +2776,20 @@ function showInserirAtividade(){
         </section>
     `;
     
-    // Populate equipes select com ordem personalizada
-    const selEquipes = document.getElementById('novaEquipes');
-    const buscaEquipe = document.getElementById('buscaEquipe');
-    
-    // Equipes prioritárias (sempre no topo, nesta ordem exata)
-    const prioridades = ['BDI Serra', 'GPT Serra', 'UOP Serra', 'COE / NOE', 'Polícia Civil'];
-    const normalizarNomeEquipe = (nome) => (nome || '')
-        .toString()
-        .trim()
-        .normalize('NFD')
-        .replace(/\p{Diacritic}/gu, '')
-        .toUpperCase();
-    const prioridadesNormalizadas = prioridades.map(normalizarNomeEquipe);
-    
-    // Separar equipes prioritárias das demais
-    const todasEntries = Object.entries(equipeMap);
-    const equipePrioritarias = [];
-    const equipeOutras = [];
-    
-    todasEntries.forEach(([id, nome]) => {
-        const idx = prioridadesNormalizadas.indexOf(normalizarNomeEquipe(nome));
-        if (idx !== -1) {
-            equipePrioritarias[idx] = [id, nome];
-        } else {
-            equipeOutras.push([id, nome]);
-        }
-    });
-    
-    // Ordenar as outras alfabeticamente
-    equipeOutras.sort((a, b) => a[1].localeCompare(b[1], 'pt-BR', { sensitivity: 'base' }));
-    
-    // Juntar: prioritárias primeiro (filtrar undefined), depois outras
-    const todasEquipes = [...equipePrioritarias.filter(e => e), ...equipeOutras];
-    
-    // Função para popular o select com filtro
-    function popularEquipes(filtro = '') {
-        const selecionados = Array.from(selEquipes.selectedOptions).map(o => o.value);
-        selEquipes.innerHTML = '';
-        const filtroLower = filtro.toLowerCase();
-        
-        // Se não há filtro, mostra na ordem: prioritárias + alfabéticas
-        // Se há filtro, filtra todas mas mantém a ordem
-        todasEquipes.forEach(([id, nome]) => {
-            if (filtro === '' || nome.toLowerCase().includes(filtroLower)) {
-                const opt = document.createElement('option');
-                opt.value = id;
-                opt.text = nome;
-                opt.selected = selecionados.includes(id);
-                selEquipes.appendChild(opt);
-            }
+    // Inicializar TreeMultiSelect de equipes para inserção
+    let tmsInserirEquipe = null;
+    const contInserir = document.getElementById('tmsInserirEquipe');
+    if (contInserir) {
+        const tmsItems = equipesData.length > 0
+            ? equipesData.map(e => ({ id: e.id_equipe, label: e.equipe, parentId: e.id_equipe_pai || null }))
+            : Object.entries(equipeMap).map(([id, label]) => ({ id: Number(id), label, parentId: null }));
+        tmsInserirEquipe = new TreeMultiSelect(contInserir, {
+            label: 'Equipes',
+            items: tmsItems,
+            selected: [],
+            placeholder: 'Buscar equipe...'
         });
     }
-    
-    // Popular inicialmente
-    popularEquipes();
-    
-    // Busca de equipes
-    buscaEquipe.addEventListener('input', () => {
-        popularEquipes(buscaEquipe.value);
-    });
     
     // Add first empty row
     addProdutoRow();
@@ -2458,10 +2844,14 @@ function showInserirAtividade(){
                         throw new Error('Validação de quantidade falhou');
                     }
                     
-                    produtos.push({
-                        id_produto: prodId,
-                        quantidade: quantidade
-                    });
+                    // Incluir tipificações se existirem (multiselectw)
+                    const tipWgt = row._tmsTipificacao;
+                    const tipIds = tipWgt ? tipWgt.getValue() : [];
+
+                    const prodObj = { id_produto: prodId, quantidade: quantidade };
+                    if (tipIds.length > 0) prodObj.tipificacoes = tipIds;
+                    
+                    produtos.push(prodObj);
                     categorias.add(produto.id_categoria_atividade);
                 }
             }
@@ -2471,7 +2861,7 @@ function showInserirAtividade(){
             data: dataInput,
             descricao: document.getElementById('novaDescricao').value,
             cai: document.getElementById('novaCai').value === 'true',
-            equipes: Array.from(document.getElementById('novaEquipes').selectedOptions).map(o => parseInt(o.value)),
+            equipes: tmsInserirEquipe ? tmsInserirEquipe.getEffective() : [],
             categorias: Array.from(categorias),
             produtos: produtos
         };
@@ -2577,6 +2967,12 @@ function addProdutoRow() {
             <input type="text" class="inputCategoria" readonly 
                 style="width:100%;padding:8px;background:#f0f0f0;">
         </td>
+        <td class="tdTipificacao" style="padding:8px;border:1px solid var(--taura-border);display:none;min-width:300px;">
+            <div class="tmsTipificacaoContainer"></div>
+            <div style="font-size:11px;color:#666;margin-top:4px;">
+                <button type="button" class="btnNovaTipificacao" style="font-size:11px;padding:2px 6px;background:var(--pbi-accent-blue);color:#fff;border:none;border-radius:3px;cursor:pointer;">+ Nova</button>
+            </div>
+        </td>
         <td style="padding:8px;border:1px solid var(--taura-border);text-align:center;">
             <button type="button" class="btnRemoveProduto" style="background:#dc3545;color:#fff;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;">✕</button>
         </td>
@@ -2590,7 +2986,50 @@ function addProdutoRow() {
     const qtdInput = row.querySelector('.inputQuantidade');
     const medidaTipoInput = row.querySelector('.inputMedidaTipo');
     const catInput = row.querySelector('.inputCategoria');
+    const tdTipificacao = row.querySelector('.tdTipificacao');
+    const tipContainer = row.querySelector('.tmsTipificacaoContainer');
+    const btnNovaTipificacao = row.querySelector('.btnNovaTipificacao');
+
+    // multiselectw para tipificações
+    const tmsTip = new TreeMultiSelect(tipContainer, {
+        placeholder: 'Buscar tipificação...',
+        maxChips: 2
+    });
+    row._tmsTipificacao = tmsTip;
     const btnRemove = row.querySelector('.btnRemoveProduto');
+
+    // IDs de produtos que exigem tipificação penal
+    const PRODUTOS_COM_TIPIFICACAO = [18, 19, 20];
+
+    // Popular multiselectw de tipificações
+    function popularTipificacoes() {
+        const items = tipificacoesData.map(t => ({
+            id: t.id_tipificacao,
+            label: [`${t.lei || ''}`, `art.${t.artigo}`, t.paragrafo ? `§${t.paragrafo}` : '', t.inciso ? `inc.${t.inciso}` : '', `-`, t.descricao].filter(Boolean).join(' ').trim(),
+            parentId: null
+        }));
+        tmsTip.refresh(items);
+    }
+
+    // Carregar tipificações se necessário
+    if (tipificacoesData.length === 0) {
+        fetchData('/tipificacoes').then(data => {
+            tipificacoesData = data;
+            popularTipificacoes();
+        });
+    } else {
+        popularTipificacoes();
+    }
+
+    // Botão nova tipificação
+    if (btnNovaTipificacao) {
+        btnNovaTipificacao.addEventListener('click', () => {
+            showModalNovaTipificacao((novaTip) => {
+                tipificacoesData.push(novaTip);
+                popularTipificacoes();
+            });
+        });
+    }
     
     // Armazena tipo do produto selecionado
     let tipoNumeroAtual = null;
@@ -2633,12 +3072,20 @@ function addProdutoRow() {
             } else {
                 qtdInput.placeholder = '0';
             }
+
+            // Mostrar/ocultar coluna de tipificação
+            if (PRODUTOS_COM_TIPIFICACAO.includes(produto.id_produto_atividade)) {
+                tdTipificacao.style.display = '';
+            } else {
+                tdTipificacao.style.display = 'none';
+            }
         } else {
             hiddenSelect.value = '';
             catInput.value = '';
             medidaTipoInput.value = '';
             qtdInput.placeholder = '';
             tipoNumeroAtual = null;
+            tdTipificacao.style.display = 'none';
         }
     }
     
@@ -2748,33 +3195,15 @@ function showAtividadesCadastradas(){
                 <label>Data Fim <input type="date" id="listaDataFim"></label>
                 
                 <div class="filter-group">
-                    <label>Equipes
-                        <select id="listaEquipeSelect" multiple size="5"></select>
-                    </label>
-                    <div class="filter-btns">
-                        <button type="button" onclick="selectAll('listaEquipeSelect')">✓ Todas</button>
-                        <button type="button" onclick="deselectAll('listaEquipeSelect')">✗ Nenhuma</button>
-                    </div>
+                    <div id="tmsListaEquipe"></div>
                 </div>
                 
                 <div class="filter-group">
-                    <label>Categorias
-                        <select id="listaCategoriaSelect" multiple size="5"></select>
-                    </label>
-                    <div class="filter-btns">
-                        <button type="button" onclick="selectAll('listaCategoriaSelect')">✓ Todas</button>
-                        <button type="button" onclick="deselectAll('listaCategoriaSelect')">✗ Nenhuma</button>
-                    </div>
+                    <div id="tmsListaCategoria"></div>
                 </div>
                 
                 <div class="filter-group">
-                    <label>Produtos
-                        <select id="listaProdutoSelect" multiple size="5"></select>
-                    </label>
-                    <div class="filter-btns">
-                        <button type="button" onclick="selectAll('listaProdutoSelect')">✓ Todos</button>
-                        <button type="button" onclick="deselectAll('listaProdutoSelect')">✗ Nenhum</button>
-                    </div>
+                    <div id="tmsListaProduto"></div>
                 </div>
                 
                 <label>Consulta Texto <input type="search" id="buscaAtividades" placeholder="Buscar texto..." /></label>
@@ -2811,87 +3240,61 @@ function showAtividadesCadastradas(){
         </section>
     `;
     
-    // Populate selects com dados já carregados
-    const selEquipes = document.getElementById('listaEquipeSelect');
-    const selCategorias = document.getElementById('listaCategoriaSelect');
-    const selProdutos = document.getElementById('listaProdutoSelect');
-    
-    // Ordenação personalizada de equipes
-    const equipesOrdenadas = ordenarEquipesComPrioridade(
-        Object.entries(equipeMap).map(([id, nome]) => ({ id_equipe: id, equipe: nome }))
-    );
-    equipesOrdenadas.forEach(({ id_equipe, equipe }) => {
-        const opt = document.createElement('option');
-        opt.value = id_equipe; opt.text = equipe;
-        selEquipes.appendChild(opt);
-    });
-    // Ordenar categorias alfabeticamente
-    const categoriasOrdenadas = Object.entries(categoriaMap).sort((a, b) => 
-        a[1].localeCompare(b[1], 'pt-BR', { sensitivity: 'base' })
-    );
-    categoriasOrdenadas.forEach(([id, nome]) => {
-        const opt = document.createElement('option');
-        opt.value = id; opt.text = nome;
-        selCategorias.appendChild(opt);
-    });
-    // Ordenar produtos alfabeticamente
-    const produtosOrdenados = Object.entries(produtoMap).sort((a, b) => 
-        a[1].localeCompare(b[1], 'pt-BR', { sensitivity: 'base' })
-    );
-    produtosOrdenados.forEach(([id, nome]) => {
-        const opt = document.createElement('option');
-        opt.value = id; opt.text = nome;
-        selProdutos.appendChild(opt);
-    });
-    
+    // Inicializar TreeMultiSelects da lista com dados já carregados em memória
+    let tmsListaEquipe = null;
+    let tmsListaCategoria = null;
+    let tmsListaProduto = null;
+
+    function initTmsLista() {
+        const contEquipe = document.getElementById('tmsListaEquipe');
+        const contCategoria = document.getElementById('tmsListaCategoria');
+        const contProduto = document.getElementById('tmsListaProduto');
+
+        if (contEquipe && equipesData.length > 0) {
+            tmsListaEquipe = new TreeMultiSelect(contEquipe, {
+                label: 'Equipes',
+                items: equipesData.map(e => ({ id: e.id_equipe, label: e.equipe, parentId: e.id_equipe_pai || null })),
+                selected: equipesData.map(e => e.id_equipe),
+                placeholder: 'Buscar equipe...'
+            });
+        }
+        if (contCategoria && Object.keys(categoriaMap).length > 0) {
+            const cats = Object.entries(categoriaMap).sort((a, b) => a[1].localeCompare(b[1], 'pt-BR', { sensitivity: 'base' }));
+            tmsListaCategoria = new TreeMultiSelect(contCategoria, {
+                label: 'Categorias',
+                items: cats.map(([id, label]) => ({ id: Number(id), label, parentId: null })),
+                selected: cats.map(([id]) => Number(id)),
+                placeholder: 'Buscar categoria...'
+            });
+        }
+        if (contProduto && Object.keys(produtoMap).length > 0) {
+            const prods = Object.entries(produtoMap).sort((a, b) => a[1].localeCompare(b[1], 'pt-BR', { sensitivity: 'base' }));
+            tmsListaProduto = new TreeMultiSelect(contProduto, {
+                label: 'Produtos',
+                items: prods.map(([id, label]) => ({ id: Number(id), label, parentId: null })),
+                selected: prods.map(([id]) => Number(id)),
+                placeholder: 'Buscar produto...'
+            });
+        }
+    }
+
     // Se os mapas estiverem vazios, recarregar dados
     async function carregarDadosFiltros() {
         if (Object.keys(equipeMap).length === 0 || Object.keys(categoriaMap).length === 0 || Object.keys(produtoMap).length === 0) {
             try {
                 const [equipes, categorias, produtos] = await Promise.all([
-                    fetchData('/equipes'),
-                    fetchData('/categorias'),
-                    fetchData('/produtos')
+                    fetchData('/equipes'), fetchData('/categorias'), fetchData('/produtos')
                 ]);
-                
-                // Ordenação personalizada de equipes
-                const equipesOrdenadas = ordenarEquipesComPrioridade(equipes);
-                equipesOrdenadas.forEach(e => {
-                    equipeMap[e.id_equipe] = e.equipe;
-                    const opt = document.createElement('option');
-                    opt.value = e.id_equipe; opt.text = e.equipe;
-                    selEquipes.appendChild(opt);
-                });
-                // Ordenar e popular categorias
-                const categoriasOrdenadas = [...categorias].sort((a, b) => 
-                    a.categoria_atividade.localeCompare(b.categoria_atividade, 'pt-BR', { sensitivity: 'base' })
-                );
-                categoriasOrdenadas.forEach(c => {
-                    categoriaMap[c.id_categoria_atividade] = c.categoria_atividade;
-                    const opt = document.createElement('option');
-                    opt.value = c.id_categoria_atividade; opt.text = c.categoria_atividade;
-                    selCategorias.appendChild(opt);
-                });
-                // Ordenar e popular produtos
+                equipesData = equipes;
+                equipes.forEach(e => { equipeMap[e.id_equipe] = e.equipe; equipeInternalMap[e.id_equipe] = !!e.interno_prf; });
+                categorias.forEach(c => { categoriaMap[c.id_categoria_atividade] = c.categoria_atividade; });
                 produtosData = produtos;
-                const produtosOrdenados = [...produtos].sort((a, b) => 
-                    a.produto_atividade.localeCompare(b.produto_atividade, 'pt-BR', { sensitivity: 'base' })
-                );
-                produtosOrdenados.forEach(p => {
-                    produtoMap[p.id_produto_atividade] = p.produto_atividade;
-                    const opt = document.createElement('option');
-                    opt.value = p.id_produto_atividade; opt.text = p.produto_atividade;
-                    selProdutos.appendChild(opt);
-                });
+                produtos.forEach(p => { produtoMap[p.id_produto_atividade] = p.produto_atividade; });
             } catch (e) {
                 console.error('Erro ao carregar dados dos filtros:', e);
             }
         }
-        
-        // Selecionar todas as opções por padrão (mas NÃO carregar atividades automaticamente)
-        selectAll('listaEquipeSelect');
-        selectAll('listaCategoriaSelect');
-        selectAll('listaProdutoSelect');
+        initTmsLista();
     }
     
     // Set default dates (ano atual)
@@ -2906,9 +3309,9 @@ function showAtividadesCadastradas(){
         const filtros = {
             dataInicio: document.getElementById('listaDataInicio').value,
             dataFim: document.getElementById('listaDataFim').value,
-            equipe: Array.from(selEquipes.selectedOptions).map(o => o.value),
-            categoria: Array.from(selCategorias.selectedOptions).map(o => o.value),
-            produto: Array.from(selProdutos.selectedOptions).map(o => o.value),
+            equipe: tmsListaEquipe ? tmsListaEquipe.getValue().map(String) : [],
+            categoria: tmsListaCategoria ? tmsListaCategoria.getValue().map(String) : [],
+            produto: tmsListaProduto ? tmsListaProduto.getValue().map(String) : [],
             consultaTexto: document.getElementById('buscaAtividades').value
         };
         loadAtividadesLista(filtros);
@@ -2937,24 +3340,10 @@ function showAtividadesCadastradas(){
             if (filtros.dataFim) document.getElementById('listaDataFim').value = filtros.dataFim;
             if (filtros.consultaTexto) document.getElementById('buscaAtividades').value = filtros.consultaTexto;
             
-            // Selecionar equipes, categorias e produtos
-            if (filtros.equipe) {
-                Array.from(selEquipes.options).forEach(opt => {
-                    opt.selected = filtros.equipe.includes(opt.value);
-                });
-            }
-            if (filtros.categoria) {
-                Array.from(selCategorias.options).forEach(opt => {
-                    opt.selected = filtros.categoria.includes(opt.value);
-                });
-            }
-            if (filtros.produto) {
-                Array.from(selProdutos.options).forEach(opt => {
-                    opt.selected = filtros.produto.includes(opt.value);
-                });
-            }
-            
-            // Restaurar dados da lista
+            // Selecionar equipes, categorias e produtos via TMS
+            if (filtros.equipe && tmsListaEquipe) tmsListaEquipe.setValue(filtros.equipe.map(Number));
+            if (filtros.categoria && tmsListaCategoria) tmsListaCategoria.setValue(filtros.categoria.map(Number));
+            if (filtros.produto && tmsListaProduto) tmsListaProduto.setValue(filtros.produto.map(Number));
             atividadesListaGlobal = JSON.parse(dadosSalvos);
             
             // Renderizar lista imediatamente (sem fazer nova requisição)
@@ -2977,22 +3366,10 @@ function showAtividadesCadastradas(){
             if (filtros.dataInicio) document.getElementById('listaDataInicio').value = filtros.dataInicio;
             if (filtros.dataFim) document.getElementById('listaDataFim').value = filtros.dataFim;
             
-            // Selecionar equipes, categorias e produtos
-            if (filtros.equipe) {
-                Array.from(selEquipes.options).forEach(opt => {
-                    opt.selected = filtros.equipe.includes(opt.value);
-                });
-            }
-            if (filtros.categoria) {
-                Array.from(selCategorias.options).forEach(opt => {
-                    opt.selected = filtros.categoria.includes(opt.value);
-                });
-            }
-            if (filtros.produto) {
-                Array.from(selProdutos.options).forEach(opt => {
-                    opt.selected = filtros.produto.includes(opt.value);
-                });
-            }
+            // Selecionar equipes, categorias e produtos via TMS
+            if (filtros.equipe && tmsListaEquipe) tmsListaEquipe.setValue(filtros.equipe.map(Number));
+            if (filtros.categoria && tmsListaCategoria) tmsListaCategoria.setValue(filtros.categoria.map(Number));
+            if (filtros.produto && tmsListaProduto) tmsListaProduto.setValue(filtros.produto.map(Number));
             
             // Limpar flag e aplicar filtros automaticamente
             localStorage.removeItem('filtrosAtividadesCadastradas');
@@ -3219,6 +3596,9 @@ function showConfiguracao(){
                 <button onclick="showCadastroProduto()" style="padding:16px 24px;background:var(--pbi-accent-blue);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:1rem;font-weight:500;">
                     📦 Cadastrar Produto
                 </button>
+                <button onclick="showCadastroTipificacao()" style="padding:16px 24px;background:#6f42c1;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:1rem;font-weight:500;">
+                    ⚖️ Tipificações Penais
+                </button>
                 ${isAdmin ? `
                 <button onclick="showCadastroUsuario()" style="padding:16px 24px;background:#28a745;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:1rem;font-weight:500;">
                     👤 Cadastrar Usuário
@@ -3230,6 +3610,188 @@ function showConfiguracao(){
             </div>
         </section>
     `;
+}
+
+// ── Modal rápido de nova tipificação ─────────────────────────────────────────
+function showModalNovaTipificacao(callback) {
+    let modal = document.getElementById('modalNovaTipificacao');
+    if (modal) modal.remove();
+
+    modal = document.createElement('div');
+    modal.id = 'modalNovaTipificacao';
+    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;';
+    modal.innerHTML = `
+        <div style="background:#fff;border-radius:8px;padding:28px;width:500px;max-width:95vw;box-shadow:0 4px 24px rgba(0,0,0,0.3);">
+            <h3 style="margin-top:0;color:var(--taura-blue);">⚖️ Nova Tipificação Penal</h3>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                <label>Lei <input id="tipLei" type="text" style="width:100%;padding:8px;margin-top:4px;" placeholder="Ex: CP, Lei 11.343"></label>
+                <label>Artigo <input id="tipArtigo" type="text" style="width:100%;padding:8px;margin-top:4px;" placeholder="Ex: 155"></label>
+                <label>Parágrafo <input id="tipParagrafo" type="text" style="width:100%;padding:8px;margin-top:4px;" placeholder="opcional"></label>
+                <label>Inciso <input id="tipInciso" type="text" style="width:100%;padding:8px;margin-top:4px;" placeholder="opcional"></label>
+            </div>
+            <label style="display:block;margin-bottom:12px;">Descrição <input id="tipDescricao" type="text" style="width:100%;padding:8px;margin-top:4px;" placeholder="Ex: Furto simples"></label>
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <button id="btnCancelarTip" type="button" style="padding:8px 18px;border:1px solid #ccc;background:#fff;border-radius:4px;cursor:pointer;">Cancelar</button>
+                <button id="btnSalvarTip" type="button" style="padding:8px 18px;background:var(--pbi-accent-blue);color:#fff;border:none;border-radius:4px;cursor:pointer;">Salvar</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    document.getElementById('btnCancelarTip').onclick = () => modal.remove();
+    document.getElementById('btnSalvarTip').onclick = async () => {
+        const body = {
+            lei: document.getElementById('tipLei').value.trim(),
+            artigo: document.getElementById('tipArtigo').value.trim(),
+            paragrafo: document.getElementById('tipParagrafo').value.trim() || null,
+            inciso: document.getElementById('tipInciso').value.trim() || null,
+            descricao: document.getElementById('tipDescricao').value.trim()
+        };
+        if (!body.lei || !body.artigo || !body.descricao) {
+            alert('Preencha Lei, Artigo e Descrição.');
+            return;
+        }
+        try {
+            const resp = await fetch(`${API_BASE}/tipificacoes`, {
+                method: 'POST',
+                headers: {'Content-Type':'application/json', 'Authorization': `Bearer ${token}`},
+                body: JSON.stringify(body)
+            });
+            if (!resp.ok) throw new Error('Erro ao salvar');
+            const nova = await resp.json();
+            modal.remove();
+            if (callback) callback(nova);
+        } catch (err) {
+            alert('Erro ao salvar tipificação: ' + err.message);
+        }
+    };
+}
+
+// ── Tela CRUD de Tipificações Penais ─────────────────────────────────────────
+async function showCadastroTipificacao() {
+    const main = document.querySelector('.main-content');
+    main.innerHTML = `
+        <header class="topbar"><h1>⚖️ Tipificações Penais</h1></header>
+        <section class="visual-card" style="max-width:1100px;">
+            <button onclick="showConfiguracao()" style="padding:8px 16px;background:#6c757d;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-bottom:16px;">← Voltar</button>
+            <h3>Cadastrar Nova Tipificação</h3>
+            <form id="formTipificacao" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:20px;">
+                <input type="hidden" id="idTipificacaoEdit" value="">
+                <label>Lei<br><input type="text" id="tipLeiCad" required style="width:100%;padding:8px;" placeholder="CP, Lei 11.343..."></label>
+                <label>Artigo<br><input type="text" id="tipArtigoCad" required style="width:100%;padding:8px;"></label>
+                <label>Parágrafo<br><input type="text" id="tipParagrafoCad" style="width:100%;padding:8px;" placeholder="opcional"></label>
+                <label>Inciso<br><input type="text" id="tipIncisoCad" style="width:100%;padding:8px;" placeholder="opcional"></label>
+                <label style="grid-column:span 3">Descrição<br><input type="text" id="tipDescricaoCad" required style="width:100%;padding:8px;"></label>
+                <label style="display:flex;align-items:flex-end;gap:8px;">
+                    <button type="submit" style="padding:8px 18px;background:var(--pbi-accent-blue);color:#fff;border:none;border-radius:4px;cursor:pointer;white-space:nowrap;">💾 Salvar</button>
+                    <button type="button" id="btnCancelarTipCad" style="padding:8px 12px;border:1px solid #ccc;background:#fff;border-radius:4px;cursor:pointer;display:none;">✕ Cancelar</button>
+                </label>
+            </form>
+            <div id="listaTipificacoes" style="margin-top:16px;">Carregando...</div>
+        </section>
+    `;
+
+    async function carregarLista() {
+        try {
+            const data = await fetchData('/tipificacoes');
+            tipificacoesData = data;
+            const div = document.getElementById('listaTipificacoes');
+            if (!div) return;
+            if (!data.length) { div.innerHTML = '<p>Nenhuma tipificação cadastrada.</p>'; return; }
+            div.innerHTML = `
+                <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                    <thead><tr style="background:#e9ecef;">
+                        <th style="padding:8px;border:1px solid #ccc;">Lei</th>
+                        <th style="padding:8px;border:1px solid #ccc;">Artigo</th>
+                        <th style="padding:8px;border:1px solid #ccc;">§</th>
+                        <th style="padding:8px;border:1px solid #ccc;">Inc.</th>
+                        <th style="padding:8px;border:1px solid #ccc;width:40%;">Descrição</th>
+                        <th style="padding:8px;border:1px solid #ccc;text-align:center;">Ações</th>
+                    </tr></thead>
+                    <tbody>
+                        ${data.map(t => `<tr>
+                            <td style="padding:6px 8px;border:1px solid #ccc;">${t.lei}</td>
+                            <td style="padding:6px 8px;border:1px solid #ccc;">${t.artigo}</td>
+                            <td style="padding:6px 8px;border:1px solid #ccc;">${t.paragrafo || ''}</td>
+                            <td style="padding:6px 8px;border:1px solid #ccc;">${t.inciso || ''}</td>
+                            <td style="padding:6px 8px;border:1px solid #ccc;">${t.descricao}</td>
+                            <td style="padding:6px 8px;border:1px solid #ccc;text-align:center;">
+                                <button onclick="editarTipificacaoCad(${t.id_tipificacao})" style="padding:4px 8px;background:#ffc107;color:#000;border:none;border-radius:3px;cursor:pointer;margin-right:4px;">✏️</button>
+                                <button onclick="excluirTipificacaoCad(${t.id_tipificacao})" style="padding:4px 8px;background:#dc3545;color:#fff;border:none;border-radius:3px;cursor:pointer;">🗑️</button>
+                            </td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>
+            `;
+        } catch (e) {
+            document.getElementById('listaTipificacoes').innerHTML = '<p style="color:red;">Erro ao carregar lista.</p>';
+        }
+    }
+
+    document.getElementById('formTipificacao').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const idEdit = document.getElementById('idTipificacaoEdit').value;
+        const body = {
+            lei: document.getElementById('tipLeiCad').value.trim(),
+            artigo: document.getElementById('tipArtigoCad').value.trim(),
+            paragrafo: document.getElementById('tipParagrafoCad').value.trim() || null,
+            inciso: document.getElementById('tipIncisoCad').value.trim() || null,
+            descricao: document.getElementById('tipDescricaoCad').value.trim()
+        };
+        if (!body.lei || !body.artigo || !body.descricao) { alert('Preencha Lei, Artigo e Descrição.'); return; }
+        const isEdit = !!idEdit;
+        const url = isEdit ? `${API_BASE}/tipificacoes/${idEdit}` : `${API_BASE}/tipificacoes`;
+        const method = isEdit ? 'PUT' : 'POST';
+        try {
+            const resp = await fetch(url, {
+                method,
+                headers: {'Content-Type':'application/json', 'Authorization': `Bearer ${token}`},
+                body: JSON.stringify(body)
+            });
+            if (!resp.ok) throw new Error('Erro ao salvar');
+            document.getElementById('formTipificacao').reset();
+            document.getElementById('idTipificacaoEdit').value = '';
+            document.getElementById('btnCancelarTipCad').style.display = 'none';
+            carregarLista();
+        } catch (err) {
+            alert('Erro: ' + err.message);
+        }
+    });
+
+    document.getElementById('btnCancelarTipCad').addEventListener('click', () => {
+        document.getElementById('formTipificacao').reset();
+        document.getElementById('idTipificacaoEdit').value = '';
+        document.getElementById('btnCancelarTipCad').style.display = 'none';
+    });
+
+    window.editarTipificacaoCad = (id) => {
+        const t = tipificacoesData.find(x => x.id_tipificacao === id);
+        if (!t) return;
+        document.getElementById('idTipificacaoEdit').value = id;
+        document.getElementById('tipLeiCad').value = t.lei;
+        document.getElementById('tipArtigoCad').value = t.artigo;
+        document.getElementById('tipParagrafoCad').value = t.paragrafo || '';
+        document.getElementById('tipIncisoCad').value = t.inciso || '';
+        document.getElementById('tipDescricaoCad').value = t.descricao;
+        document.getElementById('btnCancelarTipCad').style.display = '';
+        document.getElementById('tipLeiCad').focus();
+    };
+
+    window.excluirTipificacaoCad = async (id) => {
+        if (!confirm('Excluir esta tipificação?')) return;
+        try {
+            const resp = await fetch(`${API_BASE}/tipificacoes/${id}`, {
+                method: 'DELETE',
+                headers: {'Authorization': `Bearer ${token}`}
+            });
+            if (!resp.ok) throw new Error('Erro ao excluir');
+            carregarLista();
+        } catch (err) {
+            alert('Erro: ' + err.message);
+        }
+    };
+
+    carregarLista();
 }
 
 function checkIfAdmin() {
@@ -3272,6 +3834,14 @@ function showCadastroEquipe(){
                         <span style="font-weight:500;">Equipe interna da PRF</span>
                     </label>
                     <small style="color:#666;display:block;margin-top:4px;margin-left:26px;">Marque se a equipe pertence à PRF</small>
+                </div>
+
+                <div style="margin-bottom:20px;">
+                    <label style="display:block;margin-bottom:8px;font-weight:500;">Equipe Pai (hierarquia):</label>
+                    <select id="id_equipe_pai" style="width:100%;padding:10px;border:1px solid var(--taura-border);border-radius:4px;">
+                        <option value="">— Nenhuma (raiz) —</option>
+                        ${equipesData.map(e => `<option value="${e.id_equipe}">${e.equipe}</option>`).join('')}
+                    </select>
                 </div>
                 
                 <input type="hidden" id="id_equipe_edit" value="">
@@ -3485,7 +4055,9 @@ async function salvarEquipe() {
         const isEdit = id_edit !== '';
         const method = isEdit ? 'PUT' : 'POST';
         const url = isEdit ? `${API_BASE}/equipes/${id_edit}` : `${API_BASE}/equipes`;
-        const body = isEdit ? { equipe, interno_prf } : { equipe, interno_prf };
+        const selPai = document.getElementById('id_equipe_pai');
+        const id_equipe_pai = selPai && selPai.value ? parseInt(selPai.value) : null;
+        const body = { equipe, interno_prf, id_equipe_pai };
         
         const response = await fetch(url, {
             method: method,
@@ -3501,6 +4073,15 @@ async function salvarEquipe() {
             cancelarEdicaoEquipe();
             await loadEquipes();
             carregarListaEquipes();
+            // Repintar o select de Equipe Pai com a lista atualizada
+            const selPaiEl = document.getElementById('id_equipe_pai');
+            if (selPaiEl) {
+                const valAtual = selPaiEl.value;
+                const sorted = [...equipesData].sort((a, b) =>
+                    a.equipe.localeCompare(b.equipe, 'pt-BR', { sensitivity: 'base' }));
+                selPaiEl.innerHTML = '<option value="">— Nenhuma (raiz) —</option>' +
+                    sorted.map(e => `<option value="${e.id_equipe}"${e.id_equipe == valAtual ? ' selected' : ''}>${e.equipe}</option>`).join('');
+            }
         } else if (response.status === 401) {
             alert('Sua sessão expirou. Por favor, faça login novamente.');
             logout();

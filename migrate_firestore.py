@@ -64,7 +64,15 @@ def migrate_to_firestore():
     for id_ativ, atividade in atividades.items():
         atividades_col.document(id_ativ).set(atividade)
     print(f"  ✅ {len(atividades)} atividades migradas")
-    
+
+    # Migrar Tipificações Penais
+    print("\n⚖️ Migrando Tipificações Penais...")
+    tipificacoes_col = db.collection('tipificacoes')
+    tipificacoes = data.get('tipificacoes', {})
+    for id_tip, tip in tipificacoes.items():
+        tipificacoes_col.document(id_tip).set(tip)
+    print(f"  ✅ {len(tipificacoes)} tipificações migradas")
+
     print("\n✨ Migração concluída com sucesso!")
     print("\n💡 Para usar o Firestore real, defina: USE_MOCK_FIRESTORE=false")
 
@@ -110,6 +118,20 @@ def verify_firestore():
     atividades = db.collection('atividades').stream()
     atividade_count = sum(1 for _ in atividades)
     print(f"  Total: {atividade_count} atividades\n")
+
+    # Verificar Tipificações Penais
+    print("⚖️ Tipificações Penais:")
+    tipificacoes = db.collection('tipificacoes').stream()
+    tip_count = sum(1 for _ in tipificacoes)
+    print(f"  Total: {tip_count} tipificações\n")
+
+    # Verificar Equipes com id_equipe_pai
+    print("🏗️ Equipes PRF (id_equipe_pai):")
+    equipes_prf = db.collection('equipes').where('interno_prf', '==', True).stream()
+    for doc in equipes_prf:
+        d = doc.to_dict()
+        pai = d.get('id_equipe_pai', 'NÃO DEFINIDO')
+        print(f"  {'✅' if pai else '❌'} {d.get('equipe')} → pai={pai}")
 
 if __name__ == "__main__":
     import sys

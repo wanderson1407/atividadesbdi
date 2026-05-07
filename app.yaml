@@ -31,7 +31,7 @@ env_variables:
   
   # JWT Secret Key - Gere uma chave FORTE e ÚNICA
   # python -c "import secrets; print(secrets.token_urlsafe(32))"
-  SECRET_KEY: "your-super-secret-key-change-this-NOW"
+  SECRET_KEY: "2hMUHkqXt-wLa80EykmhMvmSk9DCpv052L-QFVi6yZA"
   
   # Configurações do servidor
   PORT: "8080"

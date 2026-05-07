@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 import json
 from typing import List, Optional, Dict, Any
-from datetime import date
+from datetime import date, datetime
 
 # MOCK IMPLEMENTATION PARA DESENVOLVIMENTO LOCAL
 # Devido a problemas de conectividade com Firestore na rede atual
@@ -30,8 +30,12 @@ class MockFirestoreClient:
             self.save_data()
 
     def save_data(self):
+        def default_serializer(obj):
+            if isinstance(obj, (date, datetime)):
+                return obj.isoformat()
+            raise TypeError(f'Object of type {obj.__class__.__name__} is not JSON serializable')
         with open(self.data_file, 'w', encoding='utf-8') as f:
-            json.dump(self.data, f, indent=2, ensure_ascii=False)
+            json.dump(self.data, f, indent=2, ensure_ascii=False, default=default_serializer)
 
     def collection(self, name: str):
         return MockCollection(self, name)
@@ -100,7 +104,10 @@ elif os.path.exists("atividades-intel-9cdabf39cef6.json"):
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "atividades-intel-9cdabf39cef6.json"
 
 def get_db():
-    """Retorna uma instância do cliente Google Cloud Firestore"""
+    """Retorna mock local ou Google Cloud Firestore conforme USE_MOCK_FIRESTORE"""
+    if os.environ.get("USE_MOCK_FIRESTORE", "false").lower() == "true":
+        print("🗂️ Usando Mock Firestore (local)")
+        return MockFirestoreClient("atividades-bdi")
     print("☁️ Usando Google Cloud Firestore")
     from google.cloud import firestore
     return firestore.Client()
@@ -113,6 +120,7 @@ class Equipe(BaseModel):
     id_equipe: Optional[int] = None
     equipe: str
     interno_prf: bool
+    id_equipe_pai: Optional[int] = None
 
 class Categoria(BaseModel):
     id_categoria_atividade: Optional[int] = None
@@ -125,9 +133,18 @@ class Produto(BaseModel):
     medida: str
     tipo_numero: str  # inteiro, decimal, moeda
 
+class TipificacaoPenal(BaseModel):
+    id_tipificacao: Optional[int] = None
+    lei: str
+    artigo: str
+    paragrafo: Optional[str] = None
+    inciso: Optional[str] = None
+    descricao: str
+
 class ProdutoAtividade(BaseModel):
     id_produto: int
     quantidade: float
+    tipificacoes: Optional[List[int]] = None  # ids de tipificações penais
 
 class Atividade(BaseModel):
     id_atividade: Optional[int] = None
@@ -152,6 +169,22 @@ class FirestoreRepository:
         docs = self.db.collection('equipes').stream()
         return [Equipe(**doc.to_dict()) for doc in docs]
 
+    def get_equipes_arvore(self) -> List[dict]:
+        """Retorna equipes em estrutura de árvore (filhos aninhados em 'children')."""
+        equipes = self.get_equipes()
+        equipes_map = {e.id_equipe: e.dict() for e in equipes}
+        # Adicionar lista de filhos a cada nó
+        for node in equipes_map.values():
+            node['children'] = []
+        raizes = []
+        for node in equipes_map.values():
+            pai_id = node.get('id_equipe_pai')
+            if pai_id and pai_id in equipes_map:
+                equipes_map[pai_id]['children'].append(node)
+            else:
+                raizes.append(node)
+        return raizes
+
     def get_equipe(self, id_equipe: int) -> Optional[Equipe]:
         doc = self.db.collection('equipes').document(str(id_equipe)).get()
         if doc.exists:
@@ -173,6 +206,26 @@ class FirestoreRepository:
     
     def delete_equipe(self, id_equipe: int):
         self.db.collection('equipes').document(str(id_equipe)).delete()
+
+    # Tipificações Penais
+    def get_tipificacoes(self) -> List[TipificacaoPenal]:
+        docs = self.db.collection('tipificacoes').stream()
+        return [TipificacaoPenal(**doc.to_dict()) for doc in docs]
+
+    def create_tipificacao(self, tip: TipificacaoPenal) -> TipificacaoPenal:
+        if tip.id_tipificacao is None:
+            tip.id_tipificacao = self._get_next_id('tipificacoes')
+        self.db.collection('tipificacoes').document(str(tip.id_tipificacao)).set(tip.dict())
+        return tip
+
+    def update_tipificacao(self, id_tip: int, tip: TipificacaoPenal) -> TipificacaoPenal:
+        doc_ref = self.db.collection('tipificacoes').document(str(id_tip))
+        data = tip.dict(exclude={'id_tipificacao'})
+        doc_ref.update(data)
+        return TipificacaoPenal(id_tipificacao=id_tip, **data)
+
+    def delete_tipificacao(self, id_tip: int):
+        self.db.collection('tipificacoes').document(str(id_tip)).delete()
 
     # Categorias
     def get_categorias(self) -> List[Categoria]:

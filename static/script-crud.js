@@ -25,42 +25,75 @@ function isAdmin() {
 
 async function carregarListaEquipes() {
     try {
-        updateToken(); // Atualizar token antes de fazer requisição
+        updateToken();
         const equipes = await fetchData('/equipes');
         const lista = document.getElementById('listaEquipes');
-        
         if (!lista) return;
-        
-        if (Object.keys(equipes).length === 0) {
+
+        if (!equipes || equipes.length === 0) {
             lista.innerHTML = '<p style="color:#666;">Nenhuma equipe cadastrada</p>';
             return;
         }
-        
+
+        // Constrói mapa id→equipe para lookup de nomes
+        const eqMapLocal = {};
+        equipes.forEach(e => { eqMapLocal[e.id_equipe] = e; });
+
+        // Ordenação: ordena cada nível alfabeticamente
+        const sortAlpha = arr => [...arr].sort((a, b) =>
+            a.equipe.localeCompare(b.equipe, 'pt-BR', { sensitivity: 'base' }));
+
+        // Monta árvore
+        const roots = [];
+        const children = {};
+        equipes.forEach(e => {
+            const pai = e.id_equipe_pai || null;
+            if (pai && eqMapLocal[pai]) {
+                if (!children[pai]) children[pai] = [];
+                children[pai].push(e);
+            } else {
+                roots.push(e);
+            }
+        });
+
+        // Renderiza linhas recursivamente
+        const rows = [];
+        const renderNode = (eq, depth) => {
+            const indent = depth > 0
+                ? `<span style="display:inline-block;width:${depth * 20}px;"></span>` +
+                  `<span style="color:#aaa;margin-right:4px;">${'└─'}</span>`
+                : '';
+            const nomePai = eq.id_equipe_pai ? (eqMapLocal[eq.id_equipe_pai]?.equipe || eq.id_equipe_pai) : '—';
+            rows.push(`
+                <tr style="${depth > 0 ? 'background:#fafafa;' : ''}">
+                    <td style="border:1px solid #dee2e6;padding:6px 8px;">${eq.id_equipe}</td>
+                    <td style="border:1px solid #dee2e6;padding:6px 8px;">${indent}${eq.equipe}</td>
+                    <td style="border:1px solid #dee2e6;padding:6px 8px;text-align:center;">${eq.interno_prf ? '✓' : ''}</td>
+                    <td style="border:1px solid #dee2e6;padding:6px 8px;">${nomePai}</td>
+                    <td style="border:1px solid #dee2e6;padding:6px 8px;text-align:center;">
+                        <button onclick="editarEquipe(${eq.id_equipe})" style="padding:3px 8px;background:#ffc107;color:#000;border:none;border-radius:3px;cursor:pointer;margin-right:4px;">✏️</button>
+                        <button onclick="excluirEquipe(${eq.id_equipe})" style="padding:3px 8px;background:#dc3545;color:#fff;border:none;border-radius:3px;cursor:pointer;">🗑️</button>
+                    </td>
+                </tr>`);
+            const filhos = children[eq.id_equipe];
+            if (filhos) sortAlpha(filhos).forEach(f => renderNode(f, depth + 1));
+        };
+
+        sortAlpha(roots).forEach(r => renderNode(r, 0));
+
         lista.innerHTML = `
             <table style="width:100%;border-collapse:collapse;">
                 <thead>
                     <tr style="background:#f2f2f2;">
-                        <th style="border:1px solid #dee2e6;padding:8px;text-align:left;">ID</th>
+                        <th style="border:1px solid #dee2e6;padding:8px;text-align:left;width:50px;">ID</th>
                         <th style="border:1px solid #dee2e6;padding:8px;text-align:left;">Nome</th>
-                        <th style="border:1px solid #dee2e6;padding:8px;text-align:center;">Interna PRF</th>
-                        <th style="border:1px solid #dee2e6;padding:8px;text-align:center;width:150px;">Ações</th>
+                        <th style="border:1px solid #dee2e6;padding:8px;text-align:center;width:80px;">PRF</th>
+                        <th style="border:1px solid #dee2e6;padding:8px;text-align:left;">Equipe Pai</th>
+                        <th style="border:1px solid #dee2e6;padding:8px;text-align:center;width:100px;">Ações</th>
                     </tr>
                 </thead>
-                <tbody>
-                    ${Object.values(equipes).map(eq => `
-                        <tr>
-                            <td style="border:1px solid #dee2e6;padding:8px;">${eq.id_equipe}</td>
-                            <td style="border:1px solid #dee2e6;padding:8px;">${eq.equipe}</td>
-                            <td style="border:1px solid #dee2e6;padding:8px;text-align:center;">${eq.interno_prf ? '✓ Sim' : '✗ Não'}</td>
-                            <td style="border:1px solid #dee2e6;padding:8px;text-align:center;">
-                                <button onclick="editarEquipe(${eq.id_equipe})" style="padding:4px 8px;background:#ffc107;color:#000;border:none;border-radius:3px;cursor:pointer;margin-right:4px;">✏️ Editar</button>
-                                <button onclick="excluirEquipe(${eq.id_equipe})" style="padding:4px 8px;background:#dc3545;color:#fff;border:none;border-radius:3px;cursor:pointer;">🗑️ Excluir</button>
-                            </td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-        `;
+                <tbody>${rows.join('')}</tbody>
+            </table>`;
     } catch (error) {
         console.error('Erro ao carregar lista de equipes:', error);
         const lista = document.getElementById('listaEquipes');
@@ -81,6 +114,8 @@ async function editarEquipe(id) {
         document.getElementById('id_equipe_edit').value = equipe.id_equipe;
         document.getElementById('equipe').value = equipe.equipe;
         document.getElementById('interno_prf').checked = equipe.interno_prf;
+        const selPai = document.getElementById('id_equipe_pai');
+        if (selPai) selPai.value = equipe.id_equipe_pai || '';
         document.getElementById('btnCancelarEquipe').style.display = 'inline-block';
         
         // Scroll para o formulário
@@ -115,6 +150,8 @@ async function excluirEquipe(id) {
 function cancelarEdicaoEquipe() {
     document.getElementById('formEquipe').reset();
     document.getElementById('id_equipe_edit').value = '';
+    const selPai = document.getElementById('id_equipe_pai');
+    if (selPai) selPai.value = '';
     document.getElementById('btnCancelarEquipe').style.display = 'none';
 }
 
@@ -438,9 +475,9 @@ async function editarAtividade(id) {
         const filtrosAtuais = {
             dataInicio: document.getElementById('listaDataInicio')?.value,
             dataFim: document.getElementById('listaDataFim')?.value,
-            equipe: Array.from(document.getElementById('listaEquipeSelect')?.selectedOptions || []).map(o => o.value),
-            categoria: Array.from(document.getElementById('listaCategoriaSelect')?.selectedOptions || []).map(o => o.value),
-            produto: Array.from(document.getElementById('listaProdutoSelect')?.selectedOptions || []).map(o => o.value),
+            equipe: (typeof tmsListaEquipe !== 'undefined' && tmsListaEquipe) ? tmsListaEquipe.getValue().map(String) : [],
+            categoria: (typeof tmsListaCategoria !== 'undefined' && tmsListaCategoria) ? tmsListaCategoria.getValue().map(String) : [],
+            produto: (typeof tmsListaProduto !== 'undefined' && tmsListaProduto) ? tmsListaProduto.getValue().map(String) : [],
             consultaTexto: document.getElementById('buscaAtividades')?.value
         };
         localStorage.setItem('listaAtividadesFiltros', JSON.stringify(filtrosAtuais));
@@ -479,22 +516,23 @@ async function editarAtividade(id) {
         document.getElementById('novaDescricao').value = atividade.descricao || '';
         document.getElementById('novaCai').value = atividade.cai ? 'true' : 'false';
         
-        // Selecionar equipes (ID correto: novaEquipes)
-        const selectEquipes = document.getElementById('novaEquipes');
-        Array.from(selectEquipes.options).forEach(option => {
-            option.selected = atividade.equipes.includes(parseInt(option.value));
-        });
+        // Selecionar equipes via TreeMultiSelect
+        if (typeof tmsInserirEquipe !== 'undefined' && tmsInserirEquipe) {
+            tmsInserirEquipe.setValue(atividade.equipes);
+        }
         
         // Limpar produtos existentes (a tabela tem tbody com ID produtosRows)
         const produtosRows = document.getElementById('produtosRows');
         produtosRows.innerHTML = ''; // Limpar linhas existentes
         
         // Adicionar produtos da atividade
+        const PRODUTOS_COM_TIPIFICACAO = [18, 19, 20];
         atividade.produtos.forEach(prod => {
             const produto = produtosData.find(p => p.id_produto_atividade === prod.id_produto);
             if (produto) {
                 const row = document.createElement('tr');
                 const rowId = Date.now() + Math.random();
+                const temTipificacao = PRODUTOS_COM_TIPIFICACAO.includes(prod.id_produto);
                 
                 row.innerHTML = `
                     <td style="padding:8px;border:1px solid var(--taura-border);">
@@ -517,6 +555,12 @@ async function editarAtividade(id) {
                         <input type="text" class="inputCategoria" readonly value="${categoriaMap[produto.id_categoria_atividade] || ''}"
                             style="width:100%;padding:8px;background:#f0f0f0;">
                     </td>
+                    <td class="tdTipificacao" style="padding:8px;border:1px solid var(--taura-border);min-width:300px;${temTipificacao ? '' : 'display:none;'}">
+                        <div class="tmsTipificacaoContainer"></div>
+                        <div style="font-size:11px;color:#666;margin-top:4px;">
+                            <button type="button" class="btnNovaTipificacao" style="font-size:11px;padding:2px 6px;background:var(--pbi-accent-blue);color:#fff;border:none;border-radius:3px;cursor:pointer;">+ Nova</button>
+                        </div>
+                    </td>
                     <td style="padding:8px;border:1px solid var(--taura-border);text-align:center;">
                         <button type="button" class="btnRemoveProduto" style="background:#dc3545;color:#fff;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;">✕</button>
                     </td>
@@ -524,6 +568,45 @@ async function editarAtividade(id) {
                 
                 produtosRows.appendChild(row);
                 
+                // Inicializar multiselectw de tipificação
+                const tipContainer = row.querySelector('.tmsTipificacaoContainer');
+                const tmsTip = new TreeMultiSelect(tipContainer, {
+                    placeholder: 'Buscar tipificação...',
+                    maxChips: 2
+                });
+                row._tmsTipificacao = tmsTip;
+
+                // Carregar e restaurar tipificações selecionadas
+                function popularERestaurarTip() {
+                    const items = tipificacoesData.map(t => ({
+                        id: t.id_tipificacao,
+                        label: [t.lei || '', `art.${t.artigo}`, t.paragrafo ? `§${t.paragrafo}` : '', t.inciso ? `inc.${t.inciso}` : '', '-', t.descricao].filter(Boolean).join(' ').trim(),
+                        parentId: null
+                    }));
+                    tmsTip.refresh(items);
+                    if (prod.tipificacoes && prod.tipificacoes.length > 0) {
+                        tmsTip.setValue(prod.tipificacoes);
+                    }
+                }
+                if (tipificacoesData.length === 0) {
+                    fetchData('/tipificacoes').then(data => { tipificacoesData = data; popularERestaurarTip(); });
+                } else {
+                    popularERestaurarTip();
+                }
+
+                // Botão nova tipificação
+                row.querySelector('.btnNovaTipificacao').addEventListener('click', () => {
+                    showModalNovaTipificacao((novaTip) => {
+                        tipificacoesData.push(novaTip);
+                        const items = tipificacoesData.map(t => ({
+                            id: t.id_tipificacao,
+                            label: [t.lei || '', `art.${t.artigo}`, t.paragrafo ? `§${t.paragrafo}` : '', t.inciso ? `inc.${t.inciso}` : '', '-', t.descricao].filter(Boolean).join(' ').trim(),
+                            parentId: null
+                        }));
+                        tmsTip.refresh(items);
+                    });
+                });
+
                 // Adicionar event listener para remover linha
                 row.querySelector('.btnRemoveProduto').addEventListener('click', () => row.remove());
             }

@@ -189,35 +189,9 @@
                     <label>Data Início <input type="date" id="dataInicio"></label>
                     <label>Data Fim <input type="date" id="dataFim"></label>
                     
-                    <div class="filter-group">
-                        <label>Equipes
-                            <select id="equipeSelect" multiple size="5"></select>
-                        </label>
-                        <div class="filter-btns">
-                            <button type="button" onclick="selectAll('equipeSelect')">✓ Todas</button>
-                            <button type="button" onclick="deselectAll('equipeSelect')">✗ Nenhuma</button>
-                        </div>
-                    </div>
-                    
-                    <div class="filter-group">
-                        <label>Categorias
-                            <select id="categoriaSelect" multiple size="5"></select>
-                        </label>
-                        <div class="filter-btns">
-                            <button type="button" onclick="selectAll('categoriaSelect')">✓ Todas</button>
-                            <button type="button" onclick="deselectAll('categoriaSelect')">✗ Nenhuma</button>
-                        </div>
-                    </div>
-                    
-                    <div class="filter-group">
-                        <label>Produtos
-                            <select id="produtoSelect" multiple size="5"></select>
-                        </label>
-                        <div class="filter-btns">
-                            <button type="button" onclick="selectAll('produtoSelect')">✓ Todas</button>
-                            <button type="button" onclick="deselectAll('produtoSelect')">✗ Nenhuma</button>
-                        </div>
-                    </div>
+                    <div id="tmsEquipe"></div>
+                    <div id="tmsCategoria"></div>
+                    <div id="tmsProduto"></div>
                     
                     <label>Consulta Texto <input type="search" id="consultaTexto" placeholder="Buscar texto..." /></label>
                     
@@ -322,6 +296,48 @@
                 </div>
             </section>
             
+            <!-- Título da Seção: Ações Integradas -->
+            <section style="background:var(--pbi-background); padding:12px 0; text-align:center;">
+                <h2 style="margin:0; color:#1b1464; font-size:1.2rem; font-weight:700;">Ações Integradas (filtro)</h2>
+            </section>
+
+            <!-- Linha 1: Tabela largura total -->
+            <section class="dashboard-grid" style="grid-template-columns: 1fr;">
+                <div class="visual-card" style="padding:24px;">
+                    <h3 style="margin:0 0 16px 0;color:#1b1464;font-size:1.1rem;font-weight:600;">Ações Integradas (PRF + outros órgãos)</h3>
+                    <p id="totalAcoesIntegradas" style="margin:0 0 12px 0; color:#666; font-size:0.9rem;"></p>
+                    <div id="quadroAcoesIntegradas" style="overflow-x:auto; max-height:400px; overflow-y:auto;">
+                        <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                            <thead style="position:sticky; top:0; background:#fff;">
+                                <tr style="background:#f5f5f5; text-align:left;">
+                                    <th style="padding:8px; border-bottom:2px solid #ddd; white-space:nowrap;">Data</th>
+                                    <th style="padding:8px; border-bottom:2px solid #ddd;">Equipe(s)</th>
+                                    <th style="padding:8px; border-bottom:2px solid #ddd;">Produto</th>
+                                    <th style="padding:8px; border-bottom:2px solid #ddd; text-align:right;">Qtd</th>
+                                    <th style="padding:8px; border-bottom:2px solid #ddd;">Tipificação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaAcoesIntegradas">
+                                <!-- Preenchido via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Linha 2: Dois gráficos 50/50 -->
+            <section class="dashboard-grid" style="grid-template-columns: repeat(2, 1fr);">
+                <div class="visual-card chart-panel">
+                    <h3 style="margin:0 0 16px 0;color:#1b1464;font-size:1.1rem;font-weight:600;">Tipificações Penais — Ações Integradas</h3>
+                    <div style="position:relative; height:300px"><canvas id="chartTipificacoes"></canvas></div>
+                </div>
+                <div class="visual-card chart-panel">
+                    <h3 style="margin:0 0 8px 0;color:#1b1464;font-size:1.1rem;font-weight:600;">Tipos Penais — Ações Integradas</h3>
+                    <p id="totalTipPenais" style="margin:0 0 8px 0; color:#666; font-size:0.85rem;"></p>
+                    <div style="position:relative; height:260px"><canvas id="chartTipPenais"></canvas></div>
+                </div>
+            </section>
+
             <!-- Título da Seção: Gráficos Anuais -->
             <section style="background:var(--pbi-background); padding:12px 0; text-align:center;">
                 <h2 style="margin:0; color:#1b1464; font-size:1.2rem; font-weight:700;">Gráficos (compilados anuais, sem filtro)</h2>
@@ -541,7 +557,8 @@
             }
         });
     </script>
-    <script src="static/script.js?v=1760000000"></script>
-    <script src="static/script-crud.js?v=1760000000"></script>
+    <script src="static/tree-multiselect.js?v=202605072000"></script>
+    <script src="static/script.js?v=202605072000"></script>
+    <script src="static/script-crud.js?v=202605072000"></script>
 </body>
 </html>

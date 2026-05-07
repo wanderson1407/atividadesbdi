@@ -1,29 +1,32 @@
-FROM python:3.11-slim
+﻿FROM python:3.11-slim
 
-# Define o diretório de trabalho
+# VersÃ£o da build â€” alterar aqui forÃ§a rebuild sem cache
+LABEL version="202605061924"
+
+# Define o diretÃ³rio de trabalho
 WORKDIR /app
 
-# Instala dependências do sistema necessárias
+# Instala dependÃªncias do sistema necessÃ¡rias
 RUN apt-get update && apt-get install -y \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Copia e instala dependências Python
+# Copia e instala dependÃªncias Python
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copia o código da aplicação
+# Copia o cÃ³digo da aplicaÃ§Ã£o
 COPY . .
 
 # Garante que o Python encontre o pacote 'app'
 ENV PYTHONPATH=/app
 
-# Variáveis de ambiente padrão (serão sobrescritas no Cloud Run)
+# VariÃ¡veis de ambiente padrÃ£o (serÃ£o sobrescritas no Cloud Run)
 ENV PORT=8080
 ENV ENVIRONMENT=production
 
-# Expõe a porta
+# ExpÃµe a porta
 EXPOSE 8080
 
-# Comando de execução usando gunicorn para produção
+# Comando de execuÃ§Ã£o usando gunicorn para produÃ§Ã£o
 CMD exec gunicorn --bind :$PORT --workers 1 --worker-class uvicorn.workers.UvicornWorker --timeout 0 app.main:app

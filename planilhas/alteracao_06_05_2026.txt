@@ -1,0 +1,223 @@
+Atividades
+Algumas atividades são específicas de integração com são importantes e por isso requerem uma necessidade especial de gestão para quantificação.
+Um exemplo desse tipo de atividade são operações em conjunto com a Polícia Civil. Ocorre que quando o usuário seleciona Polícia Civil não especifica a delegacia ou departamento da Polícia Civil que está participando da referida ocorrência, para resolvermos esse problema vamos criar subdivisões quando a equipe for Polícia Civil.
+1 - Antes temos que alterar a tela e banco (e tudo mais relacionado) de Cadastro de equipe para que uma equipe possa ter sub-equipes cadastradas na sua hierarquia em 'n' níveis.
+1.1 - No Banco de dados acabei de criar a equipe 39 - PRF.
+1.1.1 -  Alterar todas as equipes abaixo para deixá-las na hierarquia da PRF (abaixo de equipe PRF)
+ID	Nome	Interna PRF	Ações
+1	GPT SERRA	✓ Sim	✏️ Editar 🗑️ Excluir
+10	GOC - GRUPO DE OPERAÇÕES COM CÃES	✓ Sim	✏️ Editar 🗑️ Excluir
+11	GPT VIANA	✓ Sim	✏️ Editar 🗑️ Excluir
+12	GPT GUARAPARI	✓ Sim	✏️ Editar 🗑️ Excluir
+13	GPT LINHARES	✓ Sim	✏️ Editar 🗑️ Excluir
+14	GRM	✓ Sim	✏️ Editar 🗑️ Excluir
+15	PRF - OUTROS ESTADOS	✓ Sim	✏️ Editar 🗑️ Excluir
+16	SEOP	✓ Sim	✏️ Editar 🗑️ Excluir
+17	UOP BREJETUBA	✓ Sim	✏️ Editar 🗑️ Excluir
+18	UOP GUARAPARI	✓ Sim	✏️ Editar 🗑️ Excluir
+19	UOP LINHARES	✓ Sim	✏️ Editar 🗑️ Excluir
+2	UOP SERRA	✓ Sim	✏️ Editar 🗑️ Excluir
+20	UOP SAFRA	✓ Sim	✏️ Editar 🗑️ Excluir
+21	UOP SÃO MATEUS	✓ Sim	✏️ Editar 🗑️ Excluir
+22	UOP VIANA	✓ Sim	✏️ Editar 🗑️ Excluir
+23	GPT SEDE	✓ Sim	✏️ Editar 🗑️ Excluir
+3	BDI SERRA	✓ Sim	✏️ Editar 🗑️ Excluir
+31	GFT SEDE	✓ Sim	✏️ Editar 🗑️ Excluir
+34	EQUIPE EXTRA - IFR	✓ Sim	✏️ Editar 🗑️ Excluir
+35	SEINT-ES	✓ Sim	✏️ Editar 🗑️ Excluir
+36	BDI VIANA	✓ Sim	✏️ Editar 🗑️ Excluir
+37	BDI GUARAPARI	✓ Sim	✏️ Editar 🗑️ Excluir
+38	BDI LINHARES	✓ Sim	✏️ Editar 🗑️ Excluir
+39	PRF	✓ Sim	✏️ Editar 🗑️ Excluir
+4	DELEGACIA DE SERRA	✓ Sim	✏️ Editar 🗑️ Excluir
+5	COE / NOE	✓ Sim	✏️ Editar 🗑️ Excluir
+6	GFT VIANA	✓ Sim	✏️ Editar 🗑️ Excluir
+7	GFT SERRA	✓ Sim	✏️ Editar 🗑️ Excluir
+8	GFT GUARAPARI	✓ Sim	✏️ Editar 🗑️ Excluir
+9	GFT LINHARES	✓ Sim	✏️ Editar 🗑️ Excluir
+
+Ou seja, todas as equipes marcadas como equipes internas da PRF: 'Interna PRF' = SIM. Confira se faltou alguma.
+
+Coloque todas abaixo da equipe PRF
+
+1.1.2 - Se for necessário devemos alterar as atividades já cadastradas em banco para garantir que as equipes alteradas, que antes figuravam como principais, agora são sub-equipes. Acredito que será necessário alterar devido à possível alteração de ID da equipe. Temos que garantir que as equipes da PRF (como GPT Serra, BDI Serra, etc.) sejam mantidas nas atividades pra evitar perda das equipes que trabalharam nessas atividades, pois as mesmas equipes existem, porém agora abaixo de PRF.  
+2 - Alterar a tela de inserir Atividade:
+2.1 - No item 4 eu te mostro um tipo de elemento de pesquisa que facilita a selação de um ou mais itens para seleções, porém com necessidade apenas de adaptação para mostrar itens hierarquisados. Quero que altere o bloco abaixo, que é o de seleção de equipes na tela 'Inserir Atividade' para este novo elemento.
+"<div style="margin-top:16px;">
+                    <label>Equipes</label>
+                    <input type="text" id="buscaEquipe" placeholder="Buscar equipe..." style="width:100%;padding:8px;margin-bottom:8px;border:1px solid #ccc;border-radius:4px;">
+                    <select id="novaEquipes" multiple="" size="8" style="width:100%;"><option value="3">BDI SERRA</option><option value="1">GPT SERRA</option><option value="2">UOP SERRA</option><option value="5">COE / NOE</option><option value="27">POLÍCIA CIVIL</option><option value="37">BDI GUARAPARI</option><option value="38">BDI LINHARES</option><option value="36">BDI VIANA</option><option value="26">CGM VITÓRIA</option><option value="32">CONSELHO TUTELAR</option><option value="4">DELEGACIA DE SERRA</option><option value="34">EQUIPE EXTRA - IFR</option><option value="24">GCM ARACRUZ</option><option value="25">GCM SERRA</option><option value="33">GCM VILA VELHA</option><option value="8">GFT GUARAPARI</option><option value="9">GFT LINHARES</option><option value="31">GFT SEDE</option><option value="7">GFT SERRA</option><option value="6">GFT VIANA</option><option value="10">GOC - GRUPO DE OPERAÇÕES COM CÃES</option><option value="12">GPT GUARAPARI</option><option value="13">GPT LINHARES</option><option value="23">GPT SEDE</option><option value="11">GPT VIANA</option><option value="14">GRM</option><option value="28">POLÍCIA FEDERAL</option><option value="29">POLÍCIA MILITAR</option><option value="39">PRF</option><option value="15">PRF - OUTROS ESTADOS</option><option value="30">RECEITA ESTADUAL</option><option value="35">SEINT-ES</option><option value="16">SEOP</option><option value="17">UOP BREJETUBA </option><option value="18">UOP GUARAPARI</option><option value="19">UOP LINHARES</option><option value="20">UOP SAFRA</option><option value="21">UOP SÃO MATEUS</option><option value="22">UOP VIANA</option></select>
+                </div>"
+
+3 - Gráficos e relatórios: Todos os campos de pesquisa, gráficos e cards da tela do dashboard e do PDF que tenham pesquisa por equipes devem agora mostrar a 'cadeia toda de equipes, a alteração para os gráficos é bem pequena, por exemplo: 
+Gráfico 'Atividades Por Equipe' (na verdade acredito que seja só esse gráfico a ser alterado): as equipes são apresentadas na parte inferior do gráfico, basta apenas acrescentar o nível no mesmo texo. Para explicar melhor vamos pegar o exemplo da BDI Serra, no gráfico atualmente aparece no eixo X 'BDI Serra', com a alteração a BDI Serra fará parta da hierarquia da equipe PRF, então basta alterar o texto pra mostrar cada degrau da hierarquia com um traço separando os degraus 'PRF - BDI Serra'
+
+4 - Campos de pesquisa:
+Sempre foi complicado o uso do elemento de pesquisa que estamos utilizando para selecionar Equipes Categorias e Produtos das telas de Dashboard e Atividades Cadastradas, além da pesquisa de equipes para seleção das equipes no cadastro da atividade em 'Inserir Atividade'. O problema é que é necessário manter a tecla Control apertada, mas há elementos que podemos adotar que são de melhor usabilidade:
+Abaixo vou replicar o código e uma avaliação do Gemini sobre este código que extraí do Taura (via Dev Tools) em relação a um elemento que gosto de utilizar para pesquisa no Taura com múltiplas seleções.
+
+"
+<div class="form-group col-md-3" data-select2-id="21">
+
+<label for="dadosVeiculo.dadosRenavam.veiculoUfs">UF Emplacamento</label>
+
+
+<select class="form-control select2-binding-geral select2-binding-uf select2-binding-text select2-hidden-accessible" data-maximum-selection-length="5" data-placeholder="UF Emplacamento" data-width="initial" data-dropdown-css-class="select2-dropdown-uf select2-dropdown-success-selected" data-close-on-select="false" data-filtro-param="uf" multiple="" id="dadosVeiculo.dadosRenavam.veiculoUfs" name="dadosVeiculo.dadosRenavam.veiculoUfs" data-select2-id="dadosVeiculo.dadosRenavam.veiculoUfs" tabindex="-1" aria-hidden="true">
+
+
+
+
+            
+
+                <option value="" data-select2-id="34"></option>
+
+                <option value="AC" data-select2-id="35">AC</option>
+
+                <option value="AL" data-select2-id="36">AL</option>
+
+                <option value="AM" data-select2-id="37">AM</option>
+
+                <option value="AP" data-select2-id="38">AP</option>
+
+                <option value="BA" data-select2-id="39">BA</option>
+
+                <option value="CE" data-select2-id="40">CE</option>
+
+                <option value="DF" data-select2-id="41">DF</option>
+
+                <option value="ES" data-select2-id="42">ES</option>
+
+                <option value="GO" data-select2-id="43">GO</option>
+
+                <option value="MA" data-select2-id="44">MA</option>
+
+                <option value="MG" data-select2-id="45">MG</option>
+
+                <option value="MS" data-select2-id="46">MS</option>
+
+                <option value="MT" data-select2-id="47">MT</option>
+
+                <option value="PA" data-select2-id="48">PA</option>
+
+                <option value="PB" data-select2-id="49">PB</option>
+
+                <option value="PE" data-select2-id="50">PE</option>
+
+                <option value="PI" data-select2-id="51">PI</option>
+
+                <option value="PR" data-select2-id="52">PR</option>
+
+                <option value="RJ" data-select2-id="53">RJ</option>
+
+                <option value="RN" data-select2-id="54">RN</option>
+
+                <option value="RO" data-select2-id="55">RO</option>
+
+                <option value="RR" data-select2-id="56">RR</option>
+
+                <option value="RS" data-select2-id="57">RS</option>
+
+                <option value="SC" data-select2-id="58">SC</option>
+
+                <option value="SE" data-select2-id="59">SE</option>
+
+                <option value="SP" data-select2-id="60">SP</option>
+
+                <option value="TO" data-select2-id="61">TO</option>
+
+            
+
+
+
+
+
+</select><span class="select2 select2-container select2-container--bootstrap4 select2-container--above select2-container--focus select2-container--open" dir="ltr" data-select2-id="11" style="width: initial;"><span class="selection"><span class="select2-selection select2-selection--multiple borda-azul" role="combobox" aria-haspopup="true" aria-expanded="true" tabindex="-1" aria-disabled="false" aria-owns="select2-dadosVeiculodadosRenavamveiculoUfs-results" aria-activedescendant="select2-dadosVeiculodadosRenavamveiculoUfs-result-47hu-AP"><ul class="select2-selection__rendered"><li class="select2-selection__choice" title="AP" data-select2-id="62"><span class="select2-selection__choice__remove" role="presentation">×</span>AP</li><li class="select2-search select2-search--inline"><input class="select2-search__field" type="search" tabindex="0" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" role="searchbox" aria-autocomplete="list" placeholder="" style="width: 0.75em;" aria-controls="select2-dadosVeiculodadosRenavamveiculoUfs-results" aria-activedescendant="select2-dadosVeiculodadosRenavamveiculoUfs-result-47hu-AP"></li></ul></span></span><span class="dropdown-wrapper" aria-hidden="true"></span></span>
+
+
+</div>
+
+
+
+
+
+eu estava querendo criar um elemento de pesquisa igual a este nos meus sistemas em python e HTML, como posso explicar esse elemento de pesquisa para o Github copilot pra que crie igual?
+
+Para que o GitHub Copilot entenda exatamente o que você quer, você precisa usar os termos técnicos corretos da biblioteca que está sendo usada no seu exemplo.
+
+Esse elemento não é um <select> comum; ele é um componente da biblioteca Select2 estilizado com Bootstrap 4.
+
+Aqui está como você pode explicar isso ao Copilot:
+
+1. A Descrição Técnica (O "Prompt" ideal)
+Copie e cole algo similar a isto no chat do Copilot ou como comentário no seu código:
+
+"Crie um campo de seleção múltipla (Multi-select) usando a biblioteca Select2 com o tema do Bootstrap 4. O campo deve permitir pesquisar as opções internamente, exibir as seleções como 'tags' (badges) que podem ser removidas individualmente, e ter um limite de seleção de 5 itens. Use o layout de formulário do Bootstrap (form-group)."
+
+2. Componentes que você deve mencionar
+Para o Copilot não te entregar um código simples demais, certifique-se de incluir estas palavras-chave:
+
+Select2: É o nome do plugin jQuery que transforma o select estático nessa busca dinâmica.
+
+Multiple Selection: Indica que o usuário pode escolher mais de uma UF.
+
+Tags/Pills: É o visual de "balãozinho" com o "X" para remover.
+
+Placeholder: Para o texto que aparece quando nada está selecionado.
+
+Bootstrap 4 Styling: Para garantir que as cores e bordas sigam o padrão do seu print.
+
+3. Exemplo de Código que ele deve gerar
+Se você quiser ser ainda mais específico, pode pedir para ele estruturar assim:
+
+HTML
+HTML
+<div class="form-group">
+    <label for="uf_select">UF Emplacamento</label>
+    <select class="form-control select2-multiple" id="uf_select" name="ufs[]" multiple="multiple">
+        <option value="AC">AC</option>
+        <option value="SP">SP</option>
+        </select>
+</div>
+JavaScript (Onde a "mágica" acontece)
+JavaScript
+$(document).ready(function() {
+    $('#uf_select').select2({
+        theme: 'bootstrap4',
+        placeholder: "Selecione as UFs",
+        maximumSelectionLength: 5,
+        allowClear: true
+    });
+});
+Dica para Python (Django/Flask)
+Como você mencionou Python, se estiver usando Django, você pode pedir ao Copilot:
+
+"Como configurar o widget do Select2 no forms.py do Django para um campo MultipleChoiceField?"
+
+Isso ajudará a integrar a parte visual com a lógica de back-end que recebe esses dados (que chegarão como uma lista no Python).
+"
+
+Em Image Pasted eu colei um print da tela com esse elemento pra que vc veja da mesma maneira que eu vejo no Taura.
+
+Ocorre que esse tipo de filtro não está sendo usado no Taura com camadas hierárquicas, lá é apenas uma camada de dados, sem hierarquia/árvore. Porém, aqui no Atividades tenho que poder visualizar em árvore a hierarquia dos itens e selecionar a que eu quiser, independentemente de sua posição na hierarquia. Lembrando que a contabilidade sempre será realizada utilizando-se a equipe de menor hierarquia da mesma árvore, exemplo:
+	Usuário seleciona PRF e nenhum filho de PRF, então a contabilidade será para PRF. Usuário seleciona PRF, depois seleciona BDI Serra e GPT Serra na árvore de PRF, como esse dois últimos são filhos de PRF então os dois serão selecionados para contabilidade (portanto um ou mais filhos). Agora outro exemplo: Usuário seleciona PRF, depois seleciona BDI Serra e GPT Serra na árvore de PRF, porém neste caso imaginemos que BDI Serra teria tb um filho chamado 'BDI Serra OPINT', neste caso serão contabilizados para GPT Serra e para BDI Serra OPINT, pois são de árvores diferentes (portanto um ou mais filhos de galhos diferentes da árvore)
+Quero que aplique esse tipo de ELEMENTO para filtro também nas seleções de CATEGORIAS e PRODUTOS dos campos de pesquisa do dashboard e tb da tela Atividades Cadastradas. Ambas as telas possuem um bloco de campos para pesquisa (filters-row), esse bloco deve ser igual nas duas telas.
+Mesmo aplicando esse tipo de elemento é importante manter os botões 'Todas' e 'Nenhuma' abaixo das seleções de Equipes, Categorias e Produtos, tanto do dashboard como da tela Cadastrar Atividades. Dessa forma ficará mais rápido selecionar todos os itens do filtro novo de cada um desses itens, ou desmarcar todos eles.
+
+5 - Ao cadastrar uma atividade e selecionar como produtos um dos itens abaixo:
+18	PESSOAS - PRESOS EM FLAGRANTE
+19	PESSOAS - CUMPRIMENTO DE MANDADO DE PRISÃO EM ABERTO
+20	PESSOAS - ADOLESCENTE APREENDIDO
+A aplicação abrirá uma nova caixa de seleção (do novo tipo de elemento para múltiplas seleções) na mesma linha onde estão esses itens (e apenas para estes itens) na tabela de 'Produtos da Atividade' para que o usuário selecione a tipificação penal.
+Para tanto será necessário criarmos uma nova tela e coleção no banco para tipificação penal com os seguintes itens:
+id para a tipificação penal
+Lei
+Artigo
+Parágrafo
+Inciso
+Descrição
+
+Criei o arquivo dev\atividades-bdi-serra\planilhas\base_tipificacao_integral_v4.csv que contém uma lista de tipificações penais que quero que vc já carregue no banco (crie as ids)
+
+Na tela de Inserir Atividade, se o usuário procurar uma tipificação que não existe a aplicação deve permitir o cadastro de nova tipificação numa modal (sem perder os dados da atividade que está sendo cadastrada pelo usuário, e ao concluir o cadastro da nova tipificação o elemento de seleção de tipificação na tabela de 'Produtos da Atividade' do Inserir Atividade deve ser atualizado para que o usuário possa escolher a nova tipificação cadastrada, sem perder os dados da atividade que estava cadastrando.
+
+Entendeu minha solicitação. Antes de executar, liste as tarefas que irá executar pra que eu valide.

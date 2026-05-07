@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from starlette.middleware.base import BaseHTTPMiddleware
-from .firestore_repo import Atividade, Equipe, Categoria, Produto, Usuario, FirestoreRepository
+from .firestore_repo import Atividade, Equipe, Categoria, Produto, Usuario, TipificacaoPenal, FirestoreRepository
 from .auth import authenticate_google_token, get_current_user, require_admin, require_operador_or_admin, DEV_AUTH
 from typing import List, Optional
 from pydantic import BaseModel
@@ -74,6 +74,28 @@ def update_equipe(id_equipe: int, equipe: Equipe, current_user: Usuario = Depend
 def delete_equipe(id_equipe: int, current_user: Usuario = Depends(require_admin)):
     repo.delete_equipe(id_equipe)
     return {"message": "Equipe excluída com sucesso"}
+
+@app.get("/equipes/arvore")
+def get_equipes_arvore(current_user: Usuario = Depends(require_operador_or_admin)):
+    return repo.get_equipes_arvore()
+
+# Endpoints para Tipificações Penais
+@app.get("/tipificacoes", response_model=List[TipificacaoPenal])
+def get_tipificacoes(current_user: Usuario = Depends(require_operador_or_admin)):
+    return repo.get_tipificacoes()
+
+@app.post("/tipificacoes", response_model=TipificacaoPenal)
+def create_tipificacao(tip: TipificacaoPenal, current_user: Usuario = Depends(require_operador_or_admin)):
+    return repo.create_tipificacao(tip)
+
+@app.put("/tipificacoes/{id_tip}", response_model=TipificacaoPenal)
+def update_tipificacao(id_tip: int, tip: TipificacaoPenal, current_user: Usuario = Depends(require_admin)):
+    return repo.update_tipificacao(id_tip, tip)
+
+@app.delete("/tipificacoes/{id_tip}")
+def delete_tipificacao(id_tip: int, current_user: Usuario = Depends(require_admin)):
+    repo.delete_tipificacao(id_tip)
+    return {"message": "Tipificação excluída com sucesso"}
 
 # Endpoints para Categorias - Apenas admin
 @app.get("/categorias", response_model=List[Categoria])
