@@ -38,9 +38,11 @@
                 display: inline-flex; align-items: center; gap: 4px;
                 background: transparent; color: #222;
                 border: 1px solid #999; border-radius: 12px;
-                padding: 2px 8px; font-size: 12px; max-width: 260px;
-                white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-                flex-shrink: 0;
+                padding: 2px 8px; font-size: 12px; max-width: 100%;
+                overflow: hidden; flex-shrink: 1; min-width: 0;
+            }
+            .tms-chip > span:first-child {
+                overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
             }
             .tms-chip-x {
                 cursor: pointer; font-size: 13px; line-height: 1; opacity: .6;
@@ -270,6 +272,7 @@ class TreeMultiSelect {
         chip.title = text;
 
         const lbl = document.createElement('span');
+        lbl.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;';
         lbl.textContent = text;
 
         const x = document.createElement('span');
