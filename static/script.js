@@ -2789,6 +2789,7 @@ function showInserirAtividade(){
             selected: [],
             placeholder: 'Buscar equipe...'
         });
+        contInserir._tmsInstance = tmsInserirEquipe;
     }
     
     // Add first empty row
@@ -3257,6 +3258,7 @@ function showAtividadesCadastradas(){
                 selected: equipesData.map(e => e.id_equipe),
                 placeholder: 'Buscar equipe...'
             });
+            contEquipe._tmsInstance = tmsListaEquipe;
         }
         if (contCategoria && Object.keys(categoriaMap).length > 0) {
             const cats = Object.entries(categoriaMap).sort((a, b) => a[1].localeCompare(b[1], 'pt-BR', { sensitivity: 'base' }));
@@ -3266,6 +3268,7 @@ function showAtividadesCadastradas(){
                 selected: cats.map(([id]) => Number(id)),
                 placeholder: 'Buscar categoria...'
             });
+            contCategoria._tmsInstance = tmsListaCategoria;
         }
         if (contProduto && Object.keys(produtoMap).length > 0) {
             const prods = Object.entries(produtoMap).sort((a, b) => a[1].localeCompare(b[1], 'pt-BR', { sensitivity: 'base' }));
@@ -3275,6 +3278,7 @@ function showAtividadesCadastradas(){
                 selected: prods.map(([id]) => Number(id)),
                 placeholder: 'Buscar produto...'
             });
+            contProduto._tmsInstance = tmsListaProduto;
         }
     }
 

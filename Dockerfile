@@ -1,7 +1,7 @@
-﻿FROM python:3.11-slim
+FROM python:3.11-slim
 
 # VersÃ£o da build â€” alterar aqui forÃ§a rebuild sem cache
-LABEL version="202605061924"
+LABEL version="202605251745"
 
 # Define o diretÃ³rio de trabalho
 WORKDIR /app

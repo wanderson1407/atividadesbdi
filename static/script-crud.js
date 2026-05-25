@@ -472,12 +472,15 @@ async function editarAtividade(id) {
         localStorage.setItem('editingFromList', 'true');
         
         // Salvar estado atual da lista (filtros + dados)
+        const _contEquipeLista = document.getElementById('tmsListaEquipe');
+        const _contCategoriaLista = document.getElementById('tmsListaCategoria');
+        const _contProdutoLista = document.getElementById('tmsListaProduto');
         const filtrosAtuais = {
             dataInicio: document.getElementById('listaDataInicio')?.value,
             dataFim: document.getElementById('listaDataFim')?.value,
-            equipe: (typeof tmsListaEquipe !== 'undefined' && tmsListaEquipe) ? tmsListaEquipe.getValue().map(String) : [],
-            categoria: (typeof tmsListaCategoria !== 'undefined' && tmsListaCategoria) ? tmsListaCategoria.getValue().map(String) : [],
-            produto: (typeof tmsListaProduto !== 'undefined' && tmsListaProduto) ? tmsListaProduto.getValue().map(String) : [],
+            equipe: (_contEquipeLista && _contEquipeLista._tmsInstance) ? _contEquipeLista._tmsInstance.getValue().map(String) : [],
+            categoria: (_contCategoriaLista && _contCategoriaLista._tmsInstance) ? _contCategoriaLista._tmsInstance.getValue().map(String) : [],
+            produto: (_contProdutoLista && _contProdutoLista._tmsInstance) ? _contProdutoLista._tmsInstance.getValue().map(String) : [],
             consultaTexto: document.getElementById('buscaAtividades')?.value
         };
         localStorage.setItem('listaAtividadesFiltros', JSON.stringify(filtrosAtuais));
@@ -517,8 +520,9 @@ async function editarAtividade(id) {
         document.getElementById('novaCai').value = atividade.cai ? 'true' : 'false';
         
         // Selecionar equipes via TreeMultiSelect
-        if (typeof tmsInserirEquipe !== 'undefined' && tmsInserirEquipe) {
-            tmsInserirEquipe.setValue(atividade.equipes);
+        const _contInserirEquipe = document.getElementById('tmsInserirEquipe');
+        if (_contInserirEquipe && _contInserirEquipe._tmsInstance) {
+            _contInserirEquipe._tmsInstance.setValue(atividade.equipes);
         }
         
         // Limpar produtos existentes (a tabela tem tbody com ID produtosRows)
